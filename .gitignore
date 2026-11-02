@@ -42,10 +42,6 @@ venv/
 .venv/
 env/
 
-# 4. User Uploads & Media Storage
-backend/static/uploads/*
-!backend/static/uploads/.gitkeep
-
 # 4. Testing & Coverage
 .pytest_cache/
 .coverage
@@ -60,6 +56,9 @@ htmlcov/
 backups/
 legacy_backups/
 scratch/
+backend/static/uploads/*
+backend/static/uploads/**/*
+!backend/static/uploads/.gitkeep
 
 # 6. IDE & OS files
 .DS_Store

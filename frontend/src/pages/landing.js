@@ -312,57 +312,6 @@ export function initLandingPage() {
     });
   });
 
-  // Desktop Restrained Parallax Tracking (disabled on touch devices & reduced motion)
-  const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-  const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  if (!isTouch && !prefersReduced) {
-    const orbTop = document.getElementById('nexus-orb-top');
-    const orbLeft = document.getElementById('nexus-orb-left');
-    const orbRight = document.getElementById('nexus-orb-right');
-    const orbMid = document.getElementById('nexus-orb-mid');
-    const grid = document.getElementById('nexus-grid');
-
-    let mouseX = 0, mouseY = 0;
-    let targetX = 0, targetY = 0;
-
-    const onParallaxMove = (e) => {
-      const w = window.innerWidth || 1920;
-      const h = window.innerHeight || 1080;
-      targetX = (e.clientX / w) * 2 - 1; // -1 to +1
-      targetY = (e.clientY / h) * 2 - 1; // -1 to +1
-    };
-
-    const updateParallax = () => {
-      // Graceful loop exit when user navigates away from landing page
-      if (!document.getElementById('nexus-orb-top')) {
-        window.removeEventListener('mousemove', onParallaxMove);
-        return;
-      }
-
-      mouseX += (targetX - mouseX) * 0.05;
-      mouseY += (targetY - mouseY) * 0.05;
-
-      if (orbTop) {
-        orbTop.style.transform = `translateX(calc(-50% + ${mouseX * 25}px)) translateY(${mouseY * 18}px)`;
-      }
-      if (orbLeft) {
-        orbLeft.style.transform = `translate(${mouseX * -18}px, ${mouseY * -14}px)`;
-      }
-      if (orbRight) {
-        orbRight.style.transform = `translate(${mouseX * 22}px, ${mouseY * 18}px)`;
-      }
-      if (orbMid) {
-        orbMid.style.transform = `translate(calc(-50% + ${mouseX * 14}px), calc(-50% + ${mouseY * 12}px))`;
-      }
-      if (grid) {
-        grid.style.transform = `perspective(650px) rotateX(68deg) translateX(${mouseX * 14}px)`;
-      }
-
-      requestAnimationFrame(updateParallax);
-    };
-
-    window.addEventListener('mousemove', onParallaxMove, { passive: true });
-    requestAnimationFrame(updateParallax);
-  }
+  // Autonomous Cinematic Ambience (zero mouse dependency, solid & smooth across all devices)
+  // Background elements float and animate with CSS keyframes without shifting on mouse move
 }

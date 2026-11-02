@@ -755,47 +755,5 @@ export function initDashboardPage() {
 }
 
 export function initStudentDashboardBackground() {
-  const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-  const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  if (!isTouch && !prefersReduced) {
-    const orbTop = document.getElementById('student-orb-top');
-    const orbMid = document.getElementById('student-orb-mid');
-    const orbBottom = document.getElementById('student-orb-bottom');
-
-    let mouseX = 0, mouseY = 0;
-    let targetX = 0, targetY = 0;
-
-    const onMouseMove = (e) => {
-      const w = window.innerWidth || 1920;
-      const h = window.innerHeight || 1080;
-      targetX = (e.clientX / w) * 2 - 1;
-      targetY = (e.clientY / h) * 2 - 1;
-    };
-
-    const updateParallax = () => {
-      if (!document.getElementById('student-orb-top')) {
-        window.removeEventListener('mousemove', onMouseMove);
-        return;
-      }
-
-      mouseX += (targetX - mouseX) * 0.05;
-      mouseY += (targetY - mouseY) * 0.05;
-
-      if (orbTop) {
-        orbTop.style.transform = `translate(${mouseX * 18}px, ${mouseY * 14}px)`;
-      }
-      if (orbMid) {
-        orbMid.style.transform = `translate(${mouseX * -14}px, ${mouseY * -10}px)`;
-      }
-      if (orbBottom) {
-        orbBottom.style.transform = `translate(${mouseX * 16}px, ${mouseY * 12}px)`;
-      }
-
-      requestAnimationFrame(updateParallax);
-    };
-
-    window.addEventListener('mousemove', onMouseMove, { passive: true });
-    requestAnimationFrame(updateParallax);
-  }
+  // Autonomous Cinematic Ambience (zero mouse tracking, stable across all devices & browsers)
 }

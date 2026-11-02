@@ -76,16 +76,8 @@ class NexusBackgroundEngine {
     document.addEventListener('visibilitychange', this._boundVisibility);
     window.addEventListener('themechange', this._boundThemeChange);
 
-    // Mouse Parallax on Desktop (disabled on touch / reduced motion)
-    const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    if (!isTouch && !this.prefersReducedMotion) {
-      window.addEventListener('mousemove', (e) => {
-        const w = this.width || window.innerWidth;
-        const h = this.height || window.innerHeight;
-        this.mouse.targetX = (e.clientX / w) * 2 - 1; // -1 to +1
-        this.mouse.targetY = (e.clientY / h) * 2 - 1; // -1 to +1
-      }, { passive: true });
-    }
+    // Keep mouse coordinates stable at 0 across all devices (no mouse movement jitter)
+    this.mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
 
     // Initial theme based on current location hash
     const initialTheme = getThemeForRoute(window.location.hash);
