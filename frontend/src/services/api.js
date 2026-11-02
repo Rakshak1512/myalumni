@@ -4,11 +4,25 @@
  */
 
 // Read API Base URL: Vite env, or fallback to relative /api/v1 in production, localhost in development
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
-  typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://127.0.0.1:5000/api/v1'
-    : '/api/v1'
-);
+function resolveApiBaseUrl() {
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+  const isProduction = import.meta.env.PROD || (
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
+  );
+
+  if (isProduction) {
+    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+      return '/api/v1';
+    }
+    return envUrl;
+  }
+
+  return envUrl || 'http://127.0.0.1:5000/api/v1';
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 class ApiService {
   constructor() {

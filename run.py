@@ -25,3 +25,4 @@ if __name__ == '__main__':
         port=Config.BACKEND_PORT,
         debug=Config.DEBUG
     )
+

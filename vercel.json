@@ -1,11 +1,28 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm --prefix frontend install && npm --prefix frontend run build",
-  "outputDirectory": "frontend/dist",
+  "services": {
+    "myalumni-frontend": {
+      "root": "frontend",
+      "framework": "vite"
+    },
+    "myalumni-backend": {
+      "root": "backend",
+      "framework": "flask",
+      "entrypoint": "run:app"
+    }
+  },
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "myalumni-backend"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "myalumni-frontend"
+      }
     }
   ]
 }

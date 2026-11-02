@@ -4,6 +4,7 @@
  */
 import { initRouter } from './router.js';
 import { authState } from './auth/authContext.js';
+import { api } from './services/api.js';
 import { initTheme } from './services/theme.js';
 import { nexusBackground } from './nexus/nexusBackgroundRenderer.js';
 import { initFeatureHelp } from './components/featureHelp.js';
@@ -11,7 +12,7 @@ import { initFeatureHelp } from './components/featureHelp.js';
 console.log("==========================================");
 console.log("  MyAlumni 2.0 NEXUS UI Initialized");
 console.log(`  Environment: ${import.meta.env.MODE}`);
-console.log(`  API Base URL: ${import.meta.env.VITE_API_BASE_URL}`);
+console.log(`  API Base URL: ${api.baseUrl}`);
 console.log("==========================================");
 
 // Bootstrap Application
