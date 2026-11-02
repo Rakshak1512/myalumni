@@ -5,7 +5,5 @@ Werkzeug>=3.0.0
 python-dotenv==1.0.1
 requests==2.32.3
 gunicorn>=21.2.0
-pytest==8.2.2
-pytest-mock==3.14.0
 psycopg[binary]>=3.2,<4
 Pillow>=10.3.0
