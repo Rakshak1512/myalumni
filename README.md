@@ -1,142 +1,136 @@
-# MyAlumni 2.0 — Smart Alumni & Student Career Networking Portal
+# MyAlumni 2.0 — Alumni & Student Career Networking Portal
 
-**MyAlumni 2.0** is an enterprise-grade full-stack networking platform connecting university students, verified alumni, academic faculty, and administrators.
+MyAlumni is a full-stack portal for students, alumni, faculty, and administrators. It uses a Vite-based frontend, a Flask REST API, and supports local SQLite development with Supabase PostgreSQL for production.
 
-Built with **Vanilla JavaScript (ES Modules)**, **Vite**, **Python (Flask REST API)**, **Dual-Engine Relational Database (SQLite / Supabase PostgreSQL)**, and **Native JWT + SMTP OTP Authentication**.
-
----
-
-## 🌟 Key Capabilities
-
-- **Strict Role-Based Access Control (RBAC)**: Exactly 4 discrete roles (**Student**, **Alumni**, **Faculty**, and **Admin**) enforced server-side via Python decorators.
-- **Dual-Engine Database Architecture**:
-  - **Local Development**: 100% offline relational SQLite (`backend/myalumni.db`).
-  - **Cloud & Production**: Cloud Supabase PostgreSQL via connection pooling and auto-schema synchronization.
-- **Secure 6-Digit OTP Authentication**:
-  - Two-step user registration: accounts are only committed to the database **after** OTP verification.
-  - Zero plain text OTPs stored (secure SHA-256 with salt).
-  - Test user OTP login flow and self-service password reset.
-- **Direct Human-to-Human Messaging**: Authentic, persistent peer communication.
-- **Alumni Directory & Mentorship Network**: Search alumni by name, employer, technical skills, graduation year, and mentoring availability. Structured 1-on-1 career mentorship workflow.
-- **Jobs, Internships & Private Application Tracker**: Curated opportunities with private status tracking (*Interested, Applied, Interviewing, Offered, Not Selected*).
-- **Academic Resources & Notices**: Departmental study archives, previous examination question papers, and prioritized announcements.
-- **Birthday Celebrations Corner**: Community greetings with strict privacy guarantees (birth years are never publicized).
-- **Alumni Success Showcase**: Moderated promotions, placements, awards, and milestones.
-- **Events & Class Reunions**: Webinar schedules, reunion planning, attendee tracking, and capacity management.
-- **Class Batch Communities**: Cohort discussion forums and reunion planning.
-- **Student Career Growth Tracker**: Milestone targets with automatic percentage progress calculation.
-- **Deterministic Rule-Based Career Guide**: Curated technical roadmaps for Software Engineering, Data Science, DevOps, and Cybersecurity.
-- **Administrative Governance & Audit Trail**: Immutable logging of privilege escalations, suspensions, and ticket resolution.
-
----
-
-## 🛠️ Technology Stack
-
-| Layer | Technologies |
-|---|---|
-| **Frontend** | HTML5, CSS3, Vanilla JavaScript (ES6 Modules), Vite, Nexus Glassmorphism UI |
-| **Backend** | Python 3.10+, Flask REST API, Flask Blueprints, PyJWT, psycopg |
-| **Database** | Relational SQLite (Local) / Supabase PostgreSQL (Production) |
-| **Authentication** | Native Signed JWTs + SMTP 6-Digit One-Time Passcodes (OTP) |
-| **Deployment** | Vercel Serverless Architecture (`api/index.py` + Vite Static Build) |
-
----
-
-## 📁 Repository Structure
+## Repository layout
 
 ```text
 myalumni/
-├── api/
-│   ├── index.py                  # Vercel Python serverless function entrypoint
-│   └── requirements.txt          # Serverless Python runtime dependencies
-├── backend/
+├── frontend/                 # Vite frontend — Vercel Project 1
+│   ├── src/
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js
+│   └── vercel.json           # SPA fallback
+├── backend/                  # Flask API — Vercel Project 2
 │   ├── app/
-│   │   ├── auth/                 # JWT utils & RBAC decorators
-│   │   ├── repositories/         # Dual-engine data access layers
-│   │   ├── routes/               # Modular Flask blueprints (/api/v1/*)
-│   │   ├── services/             # OTP staging & SMTP email delivery
-│   │   ├── config.py             # Environment configuration
-│   │   └── db.py                 # SQLite & Supabase PostgreSQL adapter
-│   ├── tests/                    # Pytest test suite (108 tests)
-│   ├── requirements.txt          # Python requirements
-│   └── run.py                    # Local Flask development runner
-├── frontend/
-│   ├── src/                      # Vanilla JS components, pages, nexus UI
-│   ├── index.html                # Single Page Application root
-│   ├── package.json              # Frontend dependencies
-│   └── vite.config.js            # Vite configuration
-├── docs/                         # Architecture documentation & API references
-├── requirements.txt              # Root Python dependencies for Vercel
-├── vercel.json                   # Vercel full-stack routing & build config
-└── .gitignore                    # Security-first ignore rules (0 secrets)
+│   │   ├── auth/
+│   │   ├── repositories/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   ├── config.py
+│   │   └── db.py
+│   ├── tests/
+│   ├── run.py
+│   ├── pyproject.toml        # Vercel Flask entrypoint: run:app
+│   ├── requirements.txt      # Production dependencies
+│   └── requirements-dev.txt  # Test/development dependencies
+├── docs/
+├── START_HERE.md
+└── .gitignore
 ```
 
----
+## Technology
 
-## 🚀 Deployment on Vercel
+| Layer | Technology |
+|---|---|
+| Frontend | Vanilla JavaScript ES modules, Vite, HTML and CSS |
+| Backend | Python 3.12, Flask, Flask Blueprints, PyJWT |
+| Production database | Supabase PostgreSQL |
+| Local development database | SQLite |
+| Email verification | SMTP with six-digit OTP |
+| Production file storage | Supabase Storage |
 
-This repository is configured for full-stack deployment on Vercel out of the box using `vercel.json` and `api/index.py`.
+## Deploy as TWO separate Vercel projects
 
-### 1. Connect Repository
-1. Log in to [Vercel](https://vercel.com).
-2. Click **Add New -> Project**.
-3. Import your repository: `Rakshak1512/myalumni`.
-4. Keep the **Root Directory** as `./`.
+This repository is a monorepo. Import the **same GitHub repository twice**, creating two independent Vercel projects with separate domains and deployments:
 
-### 2. Configure Environment Variables in Vercel
-In your Vercel Project Settings $\to$ **Environment Variables**, configure:
+- Frontend project: `frontend/`
+- Backend project: `backend/`
 
-| Variable | Value / Description | Example |
-|---|---|---|
-| `APP_ENV` | `production` | `production` |
-| `DB_ENGINE` | `supabase` (or `postgres`) | `supabase` |
-| `DATABASE_URL` | Your Supabase PostgreSQL connection string | `postgresql://postgres.[id]:[pass]@[host]:6543/postgres` |
-| `FLASK_SECRET_KEY` | Strong random secret key | `your-secure-production-secret-key` |
-| `SMTP_HOST` | Outbound mail host | `smtp.gmail.com` |
-| `SMTP_PORT` | Outbound mail port | `587` |
-| `SMTP_USERNAME` | Outbound mail user | `your-email@gmail.com` |
-| `SMTP_PASSWORD` | 16-character App Password | `xxxx xxxx xxxx xxxx` |
-| `SMTP_FROM_EMAIL` | Sender email | `your-email@gmail.com` |
-| `SMTP_FROM_NAME` | Sender display name | `MyAlumni` |
-| `SMTP_USE_TLS` | `true` | `true` |
+Do not use the old root-level Services configuration. The root directory setting in each Vercel project is important. Full step-by-step instructions and environment variable names are in [DEPLOYMENT_VERCEL.md](./DEPLOYMENT_VERCEL.md).
 
-### 3. Deploy
-Click **Deploy**. Vercel will:
-1. Build the Vite frontend to `frontend/dist`.
-2. Bundle the Flask backend into an `@vercel/python` serverless function.
-3. Automatically route all `/api/*` requests to the Flask API and all other routes to the single-page application.
+### Project 1 — Frontend
 
----
+| Setting | Value |
+|---|---|
+| Git repository | `Rakshak1512/myalumni` |
+| Root Directory | `frontend` |
+| Framework | Vite |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Production environment variable | `VITE_API_BASE_URL=https://YOUR-BACKEND-PROJECT.vercel.app/api/v1` |
 
-## 💻 Local Development Setup
+The frontend reads `VITE_API_BASE_URL` at build time. Redeploy the frontend after changing it.
 
-### 1. Backend Setup
-```bash
+### Project 2 — Backend
+
+| Setting | Value |
+|---|---|
+| Git repository | `Rakshak1512/myalumni` |
+| Root Directory | `backend` |
+| Framework | Flask (auto-detect) |
+| Python version | `3.12` |
+| Flask entrypoint | `run:app` in `backend/pyproject.toml` |
+| Requirements | `backend/requirements.txt` |
+
+Set production database, SMTP, CORS, and storage environment variables in the backend Vercel project only. Never put backend secrets in frontend variables.
+
+Useful backend checks after deployment:
+
+- Root status: `https://YOUR-BACKEND-PROJECT.vercel.app/`
+- API health: `https://YOUR-BACKEND-PROJECT.vercel.app/api/v1/health`
+- Database health: `https://YOUR-BACKEND-PROJECT.vercel.app/api/v1/health/db`
+
+## Local development
+
+Use two terminals.
+
+### 1. Backend
+
+PowerShell:
+
+```powershell
 cd backend
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-pip install -r requirements.txt
-cp .env.example .env
-# Edit .env with your SMTP credentials and local settings
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt
+Copy-Item .env.example .env
 python run.py
 ```
-Backend runs at: `http://127.0.0.1:5000`
 
-### 2. Frontend Setup
-```bash
+The Flask API runs at `http://127.0.0.1:5000`. Its API prefix is `/api/v1`.
+
+### 2. Frontend
+
+```powershell
 cd frontend
 npm install
+Copy-Item .env.example .env
 npm run dev
 ```
-Frontend runs at: `http://localhost:5173`
 
-### 3. Run Backend Test Suite
-```bash
-cd backend
+Vite runs at `http://localhost:5173`. Local API requests default to `http://127.0.0.1:5000/api/v1`.
+
+### 3. Backend tests
+
+From the backend directory with the virtual environment active:
+
+```powershell
 pytest
 ```
-All 108 tests run against in-memory SQLite and pass without external dependencies.
+
+## Important production notes
+
+- Set `APP_ENV=production`, `DB_ENGINE=postgres`, and `DATABASE_URL` in the backend Vercel project.
+- Set `FRONTEND_URL` and `ALLOWED_ORIGINS` to the exact frontend production origin.
+- Set `BACKEND_URL` to the backend project's deployed origin. This is used when the backend creates absolute file URLs.
+- Use `STORAGE_PROVIDER=supabase` with backend-only Supabase Storage credentials for production uploads. Serverless local disk is not persistent.
+- Set SMTP host, port, username, password, sender address, and TLS variables in the backend Vercel project.
+- Use a strong `FLASK_SECRET_KEY`; never use the development placeholder.
+- Do not commit `.env`, database files, credentials, or private keys.
+- Do not run destructive database resets or migrations against the existing Supabase database.
+
+## Existing features
+
+The application includes role-based access, registration/login, email OTP, password reset, alumni directory, mentorship, direct messaging, opportunities, events, achievements, birthdays, batches, resources, uploads, notifications, and administration. Deployment changes should preserve these features and existing database records.
