@@ -20,6 +20,7 @@ test('resource Delete button calls the API and removes the resource', async ({ p
   page.on('dialog', dialog => dialog.accept());
 
   await page.goto('/#/resources');
+  await page.getByRole('button', { name: 'Study Materials & Question Papers' }).click();
   const deleteButton = page.getByRole('button', { name: 'Delete resource Test Academic Resource' });
   await expect(deleteButton).toBeVisible();
   await deleteButton.click();
