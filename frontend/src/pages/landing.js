@@ -166,7 +166,7 @@ export function renderLandingPage() {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px;">
           
           <!-- Admin Card -->
-          <div class="nexus-glass-hero-card demo-card-btn" data-role="admin" style="cursor: pointer; padding: 28px; text-align: center; border: 1px solid rgba(244, 63, 94, 0.25);">
+          <div class="nexus-glass-hero-card demo-card-btn" data-role="admin" role="button" tabindex="0" aria-label="Launch administrator demo account" style="cursor: pointer; padding: 28px; text-align: center; border: 1px solid rgba(244, 63, 94, 0.25);">
             <div style="width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 16px; background: rgba(244, 63, 94, 0.15); display: flex; align-items: center; justify-content: center; font-size: 28px; border: 1px solid rgba(244, 63, 94, 0.35); box-shadow: 0 0 20px rgba(244, 63, 94, 0.15);">
               🛡️
             </div>
@@ -175,13 +175,13 @@ export function renderLandingPage() {
             <p style="font-size: 13px; color: #94A3B8; line-height: 1.55; margin-bottom: 20px;">
               Manage users, audit logs, system configurations, and support tickets with full administrative clearance.
             </p>
-            <button type="button" class="btn btn-navy btn-sm" style="width: 100%; pointer-events: none; border-radius: var(--radius-full); border: 1px solid rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.12); color: #FCA5A5;">
+            <button type="button" aria-hidden="true" tabindex="-1" class="btn btn-navy btn-sm" style="width: 100%; pointer-events: none; border-radius: var(--radius-full); border: 1px solid rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.12); color: #FCA5A5;">
               Launch Admin Console →
             </button>
           </div>
 
           <!-- Faculty Card -->
-          <div class="nexus-glass-hero-card demo-card-btn" data-role="faculty" style="cursor: pointer; padding: 28px; text-align: center; border: 1px solid rgba(245, 158, 11, 0.25);">
+          <div class="nexus-glass-hero-card demo-card-btn" data-role="faculty" role="button" tabindex="0" aria-label="Launch faculty demo account" style="cursor: pointer; padding: 28px; text-align: center; border: 1px solid rgba(245, 158, 11, 0.25);">
             <div style="width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 16px; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; font-size: 28px; border: 1px solid rgba(245, 158, 11, 0.35); box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);">
               🎓
             </div>
@@ -190,13 +190,13 @@ export function renderLandingPage() {
             <p style="font-size: 13px; color: #94A3B8; line-height: 1.55; margin-bottom: 20px;">
               Oversee academic departments, promote graduating students to alumni status, and moderate events.
             </p>
-            <button type="button" class="btn btn-navy btn-sm" style="width: 100%; pointer-events: none; border-radius: var(--radius-full); border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.12); color: #FCD34D;">
+            <button type="button" aria-hidden="true" tabindex="-1" class="btn btn-navy btn-sm" style="width: 100%; pointer-events: none; border-radius: var(--radius-full); border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.12); color: #FCD34D;">
               Launch Faculty Portal →
             </button>
           </div>
 
           <!-- Student Card -->
-          <div class="nexus-glass-hero-card demo-card-btn" data-role="student" style="cursor: pointer; padding: 28px; text-align: center; border: 1px solid rgba(6, 182, 212, 0.25);">
+          <div class="nexus-glass-hero-card demo-card-btn" data-role="student" role="button" tabindex="0" aria-label="Launch student demo account" style="cursor: pointer; padding: 28px; text-align: center; border: 1px solid rgba(6, 182, 212, 0.25);">
             <div style="width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 16px; background: rgba(6, 182, 212, 0.15); display: flex; align-items: center; justify-content: center; font-size: 28px; border: 1px solid rgba(6, 182, 212, 0.35); box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);">
               👨‍🎓
             </div>
@@ -205,13 +205,13 @@ export function renderLandingPage() {
             <p style="font-size: 13px; color: #94A3B8; line-height: 1.55; margin-bottom: 20px;">
               Apply to opportunities, connect with verified alumni, request mentorship, and track career milestones.
             </p>
-            <button type="button" class="btn btn-navy btn-sm" style="width: 100%; pointer-events: none; border-radius: var(--radius-full); border: 1px solid rgba(6, 182, 212, 0.3); background: rgba(6, 182, 212, 0.12); color: #67E8F9;">
+            <button type="button" aria-hidden="true" tabindex="-1" class="btn btn-navy btn-sm" style="width: 100%; pointer-events: none; border-radius: var(--radius-full); border: 1px solid rgba(6, 182, 212, 0.3); background: rgba(6, 182, 212, 0.12); color: #67E8F9;">
               Launch Student Desk →
             </button>
           </div>
 
           <!-- Alumni Card -->
-          <div class="nexus-glass-hero-card demo-card-btn" data-role="alumni" style="cursor: pointer; padding: 28px; text-align: center; border: 1px solid rgba(16, 185, 129, 0.25);">
+          <div class="nexus-glass-hero-card demo-card-btn" data-role="alumni" role="button" tabindex="0" aria-label="Launch alumni demo account" style="cursor: pointer; padding: 28px; text-align: center; border: 1px solid rgba(16, 185, 129, 0.25);">
             <div style="width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 16px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; font-size: 28px; border: 1px solid rgba(16, 185, 129, 0.35); box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);">
               💼
             </div>
@@ -220,7 +220,7 @@ export function renderLandingPage() {
             <p style="font-size: 13px; color: #94A3B8; line-height: 1.55; margin-bottom: 20px;">
               Post job referrals, mentor students, organize batch reunions, and network with global industry peers.
             </p>
-            <button type="button" class="btn btn-navy btn-sm" style="width: 100%; pointer-events: none; border-radius: var(--radius-full); border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.12); color: #6EE7B7;">
+            <button type="button" aria-hidden="true" tabindex="-1" class="btn btn-navy btn-sm" style="width: 100%; pointer-events: none; border-radius: var(--radius-full); border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.12); color: #6EE7B7;">
               Launch Alumni Desk →
             </button>
           </div>
@@ -297,6 +297,12 @@ export function initLandingPage() {
 
   // 1-Click Interactive Demo Role Cards
   document.querySelectorAll('.demo-card-btn').forEach(card => {
+    card.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        card.click();
+      }
+    });
     card.addEventListener('click', async () => {
       const role = card.getAttribute('data-role');
       card.style.opacity = '0.7';
