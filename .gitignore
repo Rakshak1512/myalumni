@@ -1,0 +1,68 @@
+# ==========================================
+# MyAlumni 2.0 - Production .gitignore
+# ==========================================
+
+# 1. Environment and Secrets (CRITICAL)
+.env
+.env.*
+*.env
+!.env.example
+!*.env.example
+backend/.env
+frontend/.env
+*.pem
+*.key
+*.cert
+*service-account*.json
+*credentials*.json
+*.secret
+
+# 2. Database binaries & WAL logs (CRITICAL)
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+backend/*.db
+backend/*.db-wal
+backend/*.db-shm
+*.db.bak
+
+# 3. Dependencies and Build Output
+node_modules/
+dist/
+.vite/
+frontend/dist/
+frontend/node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+venv/
+.venv/
+env/
+
+# 4. User Uploads & Media Storage
+backend/static/uploads/*
+!backend/static/uploads/.gitkeep
+
+# 4. Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 5. Vercel & Deployment
+.vercel/
+*.log
+*.zip
+*.tar.gz
+*.bak
+backups/
+legacy_backups/
+scratch/
+
+# 6. IDE & OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
