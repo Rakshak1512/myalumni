@@ -1,4 +1,4 @@
-name: Frontend cross-browser checks
+name: Frontend cross-browser and backend checks
 
 on:
   push:
@@ -38,3 +38,29 @@ jobs:
 
       - name: Run cross-browser and mobile tests
         run: npm run test:e2e
+
+  backend-unit-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install backend and test dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run backend unit tests (isolated in-memory SQLite)
+        env:
+          APP_ENV: testing
+          DB_ENGINE: sqlite
+          FLASK_DEBUG: '0'
+        run: python -m pytest -q
