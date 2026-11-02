@@ -9,6 +9,7 @@ export async function installMockAdminSession(page, options = {}) {
   const state = {
     resourceExists: true,
     connectionRequests: [],
+    conversationStarts: [],
     alumni: [{
       id: 'alumni-test-1',
       uid: 'alumni-test-1',
@@ -129,6 +130,18 @@ export async function installMockAdminSession(page, options = {}) {
     }
 
     if (path.endsWith('/chat/conversations') && method === 'GET') {
+      await json([]);
+      return;
+    }
+
+    if (path.endsWith('/chat/conversations') && method === 'POST') {
+      const payload = request.postDataJSON() || {};
+      state.conversationStarts.push(payload);
+      await json({ id: 'conversation-test-1', recipientId: payload.recipientId }, 201);
+      return;
+    }
+
+    if (path.endsWith('/chat/conversations/conversation-test-1/messages') && method === 'GET') {
       await json([]);
       return;
     }
