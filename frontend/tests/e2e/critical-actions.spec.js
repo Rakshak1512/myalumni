@@ -31,6 +31,21 @@ test('resource Delete button calls the API and removes the resource', async ({ p
   await expect(page.getByText('No study materials found')).toBeVisible();
 });
 
+test('Messages page opens New Chat and starts a direct conversation', async ({ page }) => {
+  const state = await installMockAdminSession(page);
+  await page.goto('/#/messages');
+
+  await page.getByRole('button', { name: '+ New Chat' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByText('Test Alumni')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Chat ➔' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await expect.poll(() => state.conversationStarts.length).toBe(1);
+  expect(state.conversationStarts[0]).toMatchObject({ recipientId: 'alumni-test-1' });
+});
+
 test('directory filters, Connect modal, and request action work', async ({ page }) => {
   const state = await installMockAdminSession(page);
   await page.goto('/#/directory');
