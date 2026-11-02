@@ -1986,3 +1986,72 @@ textarea.form-control {
   }
 }
 
+
+
+/* Cross-browser interaction baseline: keyboard focus, touch targets, and iOS tap behavior. */
+button,
+a,
+[role="button"],
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button,
+[role="button"] {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--section-accent, #38bdf8);
+  outline-offset: 3px;
+}
+
+[role="button"] {
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .theme-toggle-btn,
+  .btn-about-feature,
+  .nav-item,
+  .ufu-tab-btn {
+    min-height: 44px;
+  }
+
+  .btn-sm {
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+}
+
+@media (hover: none) {
+  .btn-primary:hover,
+  .btn-success:hover,
+  .btn-danger:hover,
+  .memory-card:hover,
+  .memory-album-card:hover {
+    transform: none;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .btn-outline {
+    background: rgba(20, 30, 50, 0.94);
+  }
+
+  .modal-card,
+  .sidebar,
+  .topbar,
+  .glass-card {
+    background-color: var(--bg-card, #0f172a);
+  }
+}
