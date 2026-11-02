@@ -1611,8 +1611,22 @@ class PostgresDatabase:
             logger.info(f"Connected to Supabase PostgreSQL ({count} relations verified) in {duration:.2f}s")
 
     def _translate_sql(self, sql: str) -> str:
-        # First escape literal % to %% for psycopg parameter interpolation, then replace ? with %s
-        return sql.replace('%', '%%').replace('?', '%s')
+        if '?' in sql:
+            # First escape literal % to %% for psycopg parameter interpolation, then replace ? with %s
+            return sql.replace('%', '%%').replace('?', '%s')
+        return sql
+
+    @staticmethod
+    def _clean_params(params: Optional[Any]) -> Tuple:
+        if not params:
+            return ()
+        cleaned = []
+        for p in params:
+            if isinstance(p, bool):
+                cleaned.append(1 if p else 0)
+            else:
+                cleaned.append(p)
+        return tuple(cleaned)
 
     def close(self):
         conn = getattr(self._local, 'conn', None)
@@ -1704,6 +1718,8 @@ class PostgresDatabase:
                 val = json.dumps(val)
             elif isinstance(val, (datetime.datetime, datetime.date)):
                 val = val.isoformat()
+            elif isinstance(val, bool):
+                val = 1 if val else 0
             elif isinstance(val, (list, dict)):
                 val = json.dumps(val)
             row_values[col] = val
@@ -1711,7 +1727,12 @@ class PostgresDatabase:
         if parent_id and table_name == 'messages':
             row_values['conversation_id'] = parent_id
 
-        row_values[id_col] = str(doc_id)
+        if table_name in ('audit_logs', 'auditLogs'):
+            if str(doc_id).isdigit():
+                row_values[id_col] = int(doc_id)
+        else:
+            row_values[id_col] = str(doc_id)
+
         cols = list(row_values.keys())
         placeholders = ', '.join(['%s'] * len(cols))
         updates = ', '.join([f'"{c}" = EXCLUDED."{c}"' for c in cols if c != id_col])
@@ -1755,6 +1776,8 @@ class PostgresDatabase:
         python_filters = []
         for field, op, val in filters:
             snake_field = _camel_to_snake(field)
+            if isinstance(val, bool):
+                val = 1 if val else 0
             if op == '==':
                 sql += f' AND "{snake_field}" = %s'
                 params.append(val)
@@ -1814,19 +1837,19 @@ class PostgresDatabase:
     def query(self, sql: str, params: Optional[Tuple] = None) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         with conn.cursor() as cur:
-            cur.execute(self._translate_sql(sql), params or ())
+            cur.execute(self._translate_sql(sql), self._clean_params(params))
             return [dict(row) for row in cur.fetchall()]
 
     def execute(self, sql: str, params: Optional[Tuple] = None) -> int:
         conn = self._get_conn()
         with conn.cursor() as cur:
-            cur.execute(self._translate_sql(sql), params or ())
+            cur.execute(self._translate_sql(sql), self._clean_params(params))
             return cur.rowcount
 
     def get_one(self, sql: str, params: Optional[Tuple] = None) -> Optional[Dict[str, Any]]:
         conn = self._get_conn()
         with conn.cursor() as cur:
-            cur.execute(self._translate_sql(sql), params or ())
+            cur.execute(self._translate_sql(sql), self._clean_params(params))
             row = cur.fetchone()
             return dict(row) if row else None
 
