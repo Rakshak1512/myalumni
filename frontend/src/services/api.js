@@ -1,11 +1,13 @@
 /**
  * Centralized API Client Service for MyAlumni 2.0
- * Connects Frontend to the Flask REST API backed by SQLite.
+ * Connects the Vite frontend to the separately deployed Flask REST API.
  */
 
 // Read API Base URL: Vite env, or fallback to relative /api/v1 in production, localhost in development
 function resolveApiBaseUrl() {
-  const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+  // Vite variables are embedded at build time. In the frontend Vercel project,
+  // set VITE_API_BASE_URL to the backend production URL ending in /api/v1.
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\\/+$/, '');
   const isProduction = import.meta.env.PROD || (
     typeof window !== 'undefined' &&
     window.location.hostname !== 'localhost' &&
@@ -14,6 +16,10 @@ function resolveApiBaseUrl() {
 
   if (isProduction) {
     if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+      console.error(
+        '[MyAlumni] VITE_API_BASE_URL is missing or points to localhost in production. ' +
+        'Set it in the frontend Vercel project to https://<backend-domain>/api/v1 and redeploy.'
+      );
       return '/api/v1';
     }
     return envUrl;
