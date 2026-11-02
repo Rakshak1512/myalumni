@@ -69,6 +69,24 @@ export async function navigateTo(hash = '#/') {
   window.location.hash = hash;
 }
 
+function attachLayoutHandlers() {
+  initTopbarEvents();
+
+  const logoutBtn = document.getElementById('sidebar-logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      logoutBtn.disabled = true;
+      try {
+        await authState.logout();
+        showToast('Signed out safely.', 'info');
+        window.location.hash = '#/login';
+      } finally {
+        logoutBtn.disabled = false;
+      }
+    });
+  }
+}
+
 export async function handleRouting() {
   const app = document.getElementById('app');
   if (!app) return;
@@ -146,25 +164,8 @@ export async function handleRouting() {
     </div>
   `;
 
-  // Attach Topbar & Layout Handlers
-  initTopbarEvents();
-
-  const logoutBtn = document.getElementById('sidebar-logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await authState.logout();
-      showToast('Signed out safely.', 'info');
-      window.location.hash = '#/login';
-    });
-  }
-
-  const mobileToggle = document.getElementById('mobile-toggle-btn');
-  const sidebar = document.getElementById('app-sidebar');
-  if (mobileToggle && sidebar) {
-    mobileToggle.addEventListener('click', () => {
-      sidebar.classList.toggle('open');
-    });
-  }
+  // Attach shared layout handlers once for every protected shell.
+  attachLayoutHandlers();
 
   // Execute Page Init Script
   if (route.init) {
