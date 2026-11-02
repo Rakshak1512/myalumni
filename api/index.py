@@ -1,11 +1,17 @@
 import sys
 import os
 
-# Add backend directory to sys.path
+# Resolve backend directory across local and Vercel serverless execution contexts
 current_dir = os.path.dirname(os.path.abspath(__file__))
-backend_dir = os.path.abspath(os.path.join(current_dir, '..', 'backend'))
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
+candidate_paths = [
+    os.path.abspath(os.path.join(current_dir, '..', 'backend')),
+    os.path.abspath(os.path.join(current_dir, 'backend')),
+    os.path.abspath(current_dir)
+]
+
+for p in candidate_paths:
+    if os.path.isdir(p) and p not in sys.path:
+        sys.path.insert(0, p)
 
 from app import create_app
 

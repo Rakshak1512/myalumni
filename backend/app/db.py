@@ -1872,7 +1872,12 @@ def get_db(db_path: Optional[str] = None):
         return _db_instance
 
     engine = getattr(Config, 'DB_ENGINE', 'sqlite').lower()
-    if engine in ('supabase', 'postgres', 'postgresql') and getattr(Config, 'DATABASE_URL', ''):
+    if engine in ('supabase', 'postgres', 'postgresql') or Config.is_production():
+        if not getattr(Config, 'DATABASE_URL', ''):
+            raise RuntimeError(
+                "Production / PostgreSQL engine active, but DATABASE_URL is not set. "
+                "Ensure DATABASE_URL is configured in your Vercel environment variables."
+            )
         _db_instance = PostgresDatabase(Config.DATABASE_URL)
         return _db_instance
 
