@@ -65,6 +65,27 @@ export async function installMockAdminSession(page, options = {}) {
       return;
     }
 
+    if (path.endsWith('/auth/demo-login') && method === 'POST') {
+      const requestedRole = request.postDataJSON()?.role || 'student';
+      const role = ['student', 'alumni', 'faculty', 'admin'].includes(requestedRole)
+        ? requestedRole
+        : 'student';
+      await json({
+        user: {
+          uid: `demo-${role}-test`,
+          id: `demo-${role}-test`,
+          email: `${role}@example.test`,
+          displayName: `Demo ${role}`,
+          role,
+          accountStatus: 'active',
+          profile: {}
+        },
+        token: `demo-token-${role}-test`,
+        role
+      });
+      return;
+    }
+
     if (path.endsWith('/notifications/unread-count')) {
       await json({ unreadCount: 0 });
       return;
