@@ -35,7 +35,8 @@ def create_app(config_class=Config) -> Flask:
         logger.info("New database detected. Auto-seeding test users and initial records...")
         from app.seed import seed_sqlite_database
         seed_sqlite_database(db)
-    logger.info(f"Connected to SQLite Database: {db.db_path}")
+    engine_label = "PostgreSQL" if "postgres" in str(getattr(db, 'db_path', '')).lower() else "SQLite"
+    logger.info(f"Connected to {engine_label} Database: {db.db_path}")
 
     # Register Blueprints
     from app.routes.health_routes import health_bp
