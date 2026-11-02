@@ -31,7 +31,7 @@ test('every internal hash link resolves to a declared SPA route or in-page ancho
   const routerPath = path.join(sourceRoot, 'router.js');
   const routerSource = fs.readFileSync(routerPath, 'utf8');
   const routeKeys = new Set(
-    [...routerSource.matchAll(/['"](#\\/[^'"]*)['"]\\s*:/g)].map(match => match[1])
+    [...routerSource.matchAll(/['"](#\/[^'"]*)['"]\s*:/g)].map(match => match[1])
   );
 
   const files = [];
@@ -47,14 +47,14 @@ test('every internal hash link resolves to a declared SPA route or in-page ancho
   const violations = [];
   for (const file of files) {
     const source = fs.readFileSync(file, 'utf8');
-    const linkPattern = /href\\s*=\\s*["'`]([^"'`]+)["'`]/gi;
+    const linkPattern = /href\s*=\s*["'`]([^"'`]+)["'`]/gi;
     let match;
     while ((match = linkPattern.exec(source))) {
       const href = match[1];
       if (!href.startsWith('#/')) continue;
       const routePath = href.split('?')[0];
       if (!routeKeys.has(routePath)) {
-        const line = source.slice(0, match.index).split('\\n').length;
+        const line = source.slice(0, match.index).split('\n').length;
         violations.push(`${path.relative(process.cwd(), file)}:${line} -> ${href}`);
       }
     }
