@@ -60,7 +60,12 @@ class ApiService {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        const errorMsg = data?.error?.message || data?.message || `Request failed with status ${response.status}`;
+        const fallbackMsg = response.status === 500
+          ? "Our server encountered a temporary issue. Please try again shortly."
+          : (response.status === 502 || response.status === 504)
+            ? "Email delivery service temporarily unavailable. Please try again in a moment."
+            : `Request failed with status ${response.status}`;
+        const errorMsg = data?.error?.message || data?.message || fallbackMsg;
         const errorObj = new Error(errorMsg);
         errorObj.status = response.status;
         errorObj.code = data?.error?.code || 'API_ERROR';

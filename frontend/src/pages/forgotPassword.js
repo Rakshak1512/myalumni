@@ -193,15 +193,29 @@ export function initForgotPasswordPage() {
     }, 1000);
   }
 
+  let isSendingCode = false;
+  let isVerifyingCode = false;
+  let isUpdatingPassword = false;
+
   // STEP 1: Request OTP
   if (emailForm) {
     emailForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (isSendingCode) return;
       const email = emailInput.value.trim();
-      if (!email) return;
+      if (!email) {
+        showToast('Please enter your account email address.', 'error');
+        return;
+      }
 
+      isSendingCode = true;
       emailSubmitBtn.disabled = true;
-      emailSubmitBtn.textContent = 'Sending Code...';
+      emailSubmitBtn.innerHTML = `
+        <span style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+          <svg style="animation: spin 1s linear infinite; width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+          Dispatching Code...
+        </span>
+      `;
 
       try {
         const res = await api.forgotPassword(email);
@@ -216,13 +230,22 @@ export function initForgotPasswordPage() {
         otpInput.focus();
         startCountdown();
 
-        showToast(res.message || 'Verification code sent to your email!', 'success');
+        showToast(res.message || 'Verification code sent to your email! Please check your inbox and spam folder.', 'success');
       } catch (err) {
         console.error('Forgot password error:', err);
-        showToast(err.message || 'Unable to process request.', 'error');
+        let msg = err.message || 'Unable to process password reset request.';
+        if (err.status === 500 || (err.message && err.message.includes('status 500'))) {
+          msg = 'Server encountered a temporary issue while contacting the verification service. Please try again in a few moments.';
+        } else if (err.status === 502 || (err.message && err.message.includes('status 502'))) {
+          msg = err.message && !err.message.includes('status 502') 
+            ? err.message 
+            : 'Email delivery was temporarily delayed. Please wait 60 seconds and click Resend Code.';
+        }
+        showToast(msg, 'error');
       } finally {
+        isSendingCode = false;
         emailSubmitBtn.disabled = false;
-        emailSubmitBtn.textContent = '✦ Send 6-Digit Code';
+        emailSubmitBtn.innerHTML = '✦ Send 6-Digit Code';
       }
     });
   }
@@ -231,14 +254,21 @@ export function initForgotPasswordPage() {
   if (otpForm) {
     otpForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (isVerifyingCode) return;
       const otp = otpInput.value.trim();
       if (!otp || otp.length !== 6) {
-        showToast('Please enter the full 6-digit code.', 'error');
+        showToast('Please enter the full 6-digit verification code.', 'error');
         return;
       }
 
+      isVerifyingCode = true;
       otpSubmitBtn.disabled = true;
-      otpSubmitBtn.textContent = 'Verifying...';
+      otpSubmitBtn.innerHTML = `
+        <span style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+          <svg style="animation: spin 1s linear infinite; width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+          Verifying Code...
+        </span>
+      `;
 
       try {
         const res = await api.verifyForgotPasswordOtp({ email: currentResetEmail, otp });
@@ -256,10 +286,11 @@ export function initForgotPasswordPage() {
         showToast('Code verified! Please create your new password.', 'success');
       } catch (err) {
         console.error('Verify OTP error:', err);
-        showToast(err.message || 'Invalid or expired code.', 'error');
+        showToast(err.message || 'Invalid or expired code. Please request a new code.', 'error');
       } finally {
+        isVerifyingCode = false;
         otpSubmitBtn.disabled = false;
-        otpSubmitBtn.textContent = '✦ Verify Code';
+        otpSubmitBtn.innerHTML = '✦ Verify Code';
       }
     });
   }
@@ -267,17 +298,19 @@ export function initForgotPasswordPage() {
   // Resend OTP
   if (resendBtn) {
     resendBtn.addEventListener('click', async () => {
-      if (!currentResetEmail) return;
+      if (!currentResetEmail || isSendingCode) return;
+      isSendingCode = true;
       resendBtn.disabled = true;
       resendBtn.textContent = 'Sending...';
 
       try {
         const res = await api.forgotPassword(currentResetEmail);
         startCountdown();
-        showToast(res.message || 'Fresh code dispatched!', 'success');
+        showToast(res.message || 'Fresh code dispatched to your email!', 'success');
       } catch (err) {
-        showToast(err.message || 'Failed to resend code.', 'error');
+        showToast(err.message || 'Failed to resend code. Please try again shortly.', 'error');
       } finally {
+        isSendingCode = false;
         resendBtn.disabled = false;
         resendBtn.textContent = 'Resend Code';
       }
@@ -299,6 +332,7 @@ export function initForgotPasswordPage() {
   if (pwForm) {
     pwForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (isUpdatingPassword) return;
       const p1 = newPwInput.value;
       const p2 = confirmPwInput.value;
 
@@ -311,8 +345,14 @@ export function initForgotPasswordPage() {
         return;
       }
 
+      isUpdatingPassword = true;
       pwSubmitBtn.disabled = true;
-      pwSubmitBtn.textContent = 'Updating Password...';
+      pwSubmitBtn.innerHTML = `
+        <span style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+          <svg style="animation: spin 1s linear infinite; width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+          Updating Password...
+        </span>
+      `;
 
       try {
         await api.resetPassword({ resetToken: verifiedResetToken, newPassword: p1 });
@@ -321,13 +361,14 @@ export function initForgotPasswordPage() {
         title.style.display = 'none';
         subtitle.style.display = 'none';
         footerNav.style.display = 'none';
-        showToast('Password updated successfully!', 'success');
+        showToast('Password updated successfully! You can now log in.', 'success');
       } catch (err) {
         console.error('Reset password error:', err);
         showToast(err.message || 'Failed to reset password. Session may have expired.', 'error');
       } finally {
+        isUpdatingPassword = false;
         pwSubmitBtn.disabled = false;
-        pwSubmitBtn.textContent = '✦ Reset and Save Password';
+        pwSubmitBtn.innerHTML = '✦ Reset and Save Password';
       }
     });
   }

@@ -31,6 +31,105 @@ def _hash_otp(email: str, otp: str) -> str:
     return hashlib.sha256(payload.encode('utf-8')).hexdigest()
 
 
+def _db_save_otp(email: str, purpose: str, otp_hash: str, expires_at: datetime.datetime, attempts: int = 0):
+    try:
+        from app.db import get_db
+        db = get_db()
+        doc_id = f"{purpose}_{email}"
+        db.collection("otp_verifications").document(doc_id).set({
+            "id": doc_id,
+            "email": email,
+            "purpose": purpose,
+            "otp_hash": otp_hash,
+            "attempts": attempts,
+            "expires_at": expires_at.isoformat(),
+            "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
+    except Exception as e:
+        logger.debug(f"DB save OTP note: {e}")
+
+
+def _db_get_otp(email: str, purpose: str) -> Optional[Dict[str, Any]]:
+    try:
+        from app.db import get_db
+        db = get_db()
+        doc_id = f"{purpose}_{email}"
+        snap = db.collection("otp_verifications").document(doc_id).get()
+        if snap.exists:
+            d = snap.to_dict()
+            exp_at = d.get('expires_at')
+            if isinstance(exp_at, str):
+                try:
+                    exp_at = datetime.datetime.fromisoformat(exp_at)
+                except Exception:
+                    pass
+            return {
+                "otp_hash": d.get('otp_hash'),
+                "attempts": int(d.get('attempts', 0)),
+                "expires_at": exp_at,
+                "created_at": d.get('created_at')
+            }
+    except Exception as e:
+        logger.debug(f"DB get OTP note: {e}")
+    return None
+
+
+def _db_delete_otp(email: str, purpose: str):
+    try:
+        from app.db import get_db
+        db = get_db()
+        doc_id = f"{purpose}_{email}"
+        db.collection("otp_verifications").document(doc_id).delete()
+    except Exception as e:
+        logger.debug(f"DB delete OTP note: {e}")
+
+
+def _db_save_reset_token(token: str, email: str, expires_at: datetime.datetime):
+    try:
+        from app.db import get_db
+        db = get_db()
+        db.collection("password_reset_tokens").document(token).set({
+            "id": token,
+            "token": token,
+            "email": email,
+            "expires_at": expires_at.isoformat(),
+            "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
+    except Exception as e:
+        logger.debug(f"DB save reset token note: {e}")
+
+
+def _db_get_reset_token(token: str) -> Optional[Dict[str, Any]]:
+    try:
+        from app.db import get_db
+        db = get_db()
+        snap = db.collection("password_reset_tokens").document(token).get()
+        if snap.exists:
+            d = snap.to_dict()
+            exp_at = d.get('expires_at')
+            if isinstance(exp_at, str):
+                try:
+                    exp_at = datetime.datetime.fromisoformat(exp_at)
+                except Exception:
+                    pass
+            return {
+                "email": d.get('email'),
+                "expires_at": exp_at
+            }
+    except Exception as e:
+        logger.debug(f"DB get reset token note: {e}")
+    return None
+
+
+def _db_delete_reset_token(token: str):
+    try:
+        from app.db import get_db
+        db = get_db()
+        db.collection("password_reset_tokens").document(token).delete()
+    except Exception as e:
+        logger.debug(f"DB delete reset token note: {e}")
+
+
 class OTPService:
     @staticmethod
     def generate_otp() -> str:
@@ -175,20 +274,23 @@ class OTPService:
     def request_password_reset_otp(cls, email: str, user_name: Optional[str] = None) -> Tuple[bool, str, bool]:
         email = _normalize_email(email)
         with _lock:
-            existing = _PASSWORD_RESET_STORE.get(email)
+            existing = _PASSWORD_RESET_STORE.get(email) or _db_get_otp(email, "forgot_password")
             can_send, remaining = cls.can_resend(existing)
             if not can_send:
                 return False, f"Please wait {remaining} seconds before requesting another code.", False
 
             otp = cls.generate_otp()
             now = datetime.datetime.now(datetime.timezone.utc)
+            exp_at = now + datetime.timedelta(minutes=Config.OTP_EXPIRY_MINUTES)
+            otp_hash = _hash_otp(email, otp)
             _PASSWORD_RESET_STORE[email] = {
-                "otp_hash": _hash_otp(email, otp),
+                "otp_hash": otp_hash,
                 "created_at": now,
                 "last_sent_at": now,
-                "expires_at": now + datetime.timedelta(minutes=Config.OTP_EXPIRY_MINUTES),
+                "expires_at": exp_at,
                 "attempts": 0
             }
+            _db_save_otp(email, "forgot_password", otp_hash, exp_at, attempts=0)
 
         email_sent, err = EmailService.send_otp_email(email, otp, purpose="forgot_password", user_name=user_name)
 
@@ -209,53 +311,62 @@ class OTPService:
         clean_otp = (entered_otp or "").strip()
 
         with _lock:
-            record = _PASSWORD_RESET_STORE.get(email)
+            record = _PASSWORD_RESET_STORE.get(email) or _db_get_otp(email, "forgot_password")
             if not record:
                 return False, "No active password reset request found for this email.", None
 
             if cls._is_expired(record):
                 del _PASSWORD_RESET_STORE[email]
+                _db_delete_otp(email, "forgot_password")
                 return False, "Password reset code has expired. Please request a new one.", None
 
             if record["attempts"] >= Config.OTP_MAX_ATTEMPTS:
                 del _PASSWORD_RESET_STORE[email]
+                _db_delete_otp(email, "forgot_password")
                 return False, "Maximum attempts exceeded. Please request a new code.", None
 
             if _hash_otp(email, clean_otp) != record["otp_hash"]:
                 record["attempts"] += 1
+                _db_save_otp(email, "forgot_password", record["otp_hash"], record["expires_at"], attempts=record["attempts"])
                 rem = Config.OTP_MAX_ATTEMPTS - record["attempts"]
                 if rem <= 0:
                     del _PASSWORD_RESET_STORE[email]
+                    _db_delete_otp(email, "forgot_password")
                     return False, "Maximum attempts exceeded. Please restart the reset process.", None
                 return False, f"Invalid code. {rem} attempt{'s' if rem != 1 else ''} remaining.", None
 
             # Invalidate OTP immediately to prevent replay
-            del _PASSWORD_RESET_STORE[email]
+            _PASSWORD_RESET_STORE.pop(email, None)
+            _db_delete_otp(email, "forgot_password")
 
             # Generate temporary reset token valid for 15 minutes
             reset_token = secrets.token_urlsafe(32)
             now = datetime.datetime.now(datetime.timezone.utc)
+            token_exp = now + datetime.timedelta(minutes=15)
             _RESET_TOKENS[reset_token] = {
                 "email": email,
-                "expires_at": now + datetime.timedelta(minutes=15)
+                "expires_at": token_exp
             }
+            _db_save_reset_token(reset_token, email, token_exp)
             return True, None, reset_token
 
     @classmethod
     def consume_reset_token(cls, reset_token: str) -> Tuple[bool, Optional[str], Optional[str]]:
         """Validates and invalidates a password reset token."""
         with _lock:
-            record = _RESET_TOKENS.get(reset_token)
+            record = _RESET_TOKENS.get(reset_token) or _db_get_reset_token(reset_token)
             if not record:
                 return False, "Invalid or expired reset session. Please request a new code.", None
 
             now = datetime.datetime.now(datetime.timezone.utc)
             if now > record["expires_at"]:
-                del _RESET_TOKENS[reset_token]
+                _RESET_TOKENS.pop(reset_token, None)
+                _db_delete_reset_token(reset_token)
                 return False, "Password reset session has timed out. Please request a new code.", None
 
             email = record["email"]
-            del _RESET_TOKENS[reset_token]
+            _RESET_TOKENS.pop(reset_token, None)
+            _db_delete_reset_token(reset_token)
             return True, None, email
 
     # -------------------------------------------------------------

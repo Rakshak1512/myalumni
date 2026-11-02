@@ -939,6 +939,28 @@ CREATE INDEX IF NOT EXISTS idx_file_attachments_uploader ON file_attachments(upl
 CREATE INDEX IF NOT EXISTS idx_file_attachments_module_rel ON file_attachments(related_module, related_id);
 CREATE INDEX IF NOT EXISTS idx_file_attachments_category ON file_attachments(category);
 
+-- OTP Verifications
+CREATE TABLE IF NOT EXISTS otp_verifications (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    purpose TEXT NOT NULL,
+    otp_hash TEXT NOT NULL,
+    attempts INTEGER DEFAULT 0,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_otp_email_purpose ON otp_verifications(email, purpose);
+
+-- Password Reset Tokens
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id TEXT PRIMARY KEY,
+    token TEXT NOT NULL,
+    email TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_pwd_reset_tokens_email ON password_reset_tokens(email);
+
 -- Compatibility Views
 CREATE VIEW IF NOT EXISTS opportunities AS SELECT * FROM postings;
 CREATE VIEW IF NOT EXISTS savedOpportunities AS SELECT * FROM saved_postings;
@@ -1605,6 +1627,25 @@ class PostgresDatabase:
         t0 = time.time()
         conn = self._get_conn()
         with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS otp_verifications (
+                    id VARCHAR(255) PRIMARY KEY,
+                    email VARCHAR(255) NOT NULL,
+                    purpose VARCHAR(50) NOT NULL,
+                    otp_hash VARCHAR(255) NOT NULL,
+                    attempts INTEGER DEFAULT 0,
+                    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+                CREATE INDEX IF NOT EXISTS idx_otp_email_purpose ON otp_verifications(email, purpose);
+                CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                    id VARCHAR(255) PRIMARY KEY,
+                    token VARCHAR(255) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+            """)
             cur.execute("SELECT count(*) as total FROM information_schema.tables WHERE table_schema = 'public';")
             count = cur.fetchone()['total']
             duration = time.time() - t0

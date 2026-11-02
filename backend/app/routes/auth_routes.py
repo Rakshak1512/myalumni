@@ -438,31 +438,37 @@ def logout():
 @auth_bp.route('/auth/forgot-password', methods=['POST'])
 def forgot_password():
     """Requests a 6-digit OTP to reset an account password."""
-    data = request.get_json() or {}
-    email = (data.get('email') or '').strip().lower()
-    is_valid, err = validate_email(email)
-    if not is_valid:
-        return error_response(err, "INVALID_EMAIL", 400)
+    try:
+        data = request.get_json() or {}
+        email = (data.get('email') or '').strip().lower()
+        is_valid, err = validate_email(email)
+        if not is_valid:
+            return error_response(err, "INVALID_EMAIL", 400)
 
-    user = user_repo.get_by_email(email)
-    if not user:
-        # Generic safe response to prevent email probing, but don't error out
+        user = user_repo.get_by_email(email)
+        if not user:
+            # Generic safe response to prevent email probing, but don't error out
+            return success_response({
+                "email": email,
+                "requiresOtp": True
+            }, message="If an account exists with this email, a 6-digit verification code has been dispatched.")
+
+        display_name = user.get('displayName') or user.get('display_name')
+        success, msg, email_sent = OTPService.request_password_reset_otp(email, display_name)
+        if not success:
+            return error_response(msg, "OTP_COOLDOWN", 429)
+
+        if not email_sent:
+            logger.warning(f"Email dispatch notice for password reset {email}: {msg}")
+            return error_response(msg or "Failed to dispatch verification email. Please check your credentials or try again later.", "EMAIL_DISPATCH_FAILED", 502)
+
         return success_response({
             "email": email,
             "requiresOtp": True
-        }, message="If an account exists with this email, a 6-digit verification code has been dispatched.")
-
-    success, msg, email_sent = OTPService.request_password_reset_otp(email, user.get('displayName'))
-    if not success:
-        return error_response(msg, "OTP_COOLDOWN", 429)
-
-    if not email_sent:
-        return error_response(msg, "EMAIL_DISPATCH_FAILED", 502)
-
-    return success_response({
-        "email": email,
-        "requiresOtp": True
-    }, message=msg)
+        }, message=msg)
+    except Exception as e:
+        logger.error(f"Error processing forgot_password: {str(e)}", exc_info=True)
+        return error_response("An unexpected server error occurred while processing your password reset request. Please try again.", "INTERNAL_SERVER_ERROR", 500)
 
 
 @auth_bp.route('/auth/verify-forgot-password-otp', methods=['POST'])

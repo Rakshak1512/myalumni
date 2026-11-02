@@ -86,12 +86,18 @@ MyAlumni Security Team"""
 </body>
 </html>"""
 
-        # Log OTP to developer console for seamless local development
-        logger.info(f"🔑 [OTP DISPATCH] Recipient: {to_email} | Purpose: {purpose} | Code: {otp}")
+        # Log OTP securely — never expose OTP in production logs
+        if Config.APP_ENV == 'development' and Config.DEBUG:
+            logger.info(f"🔑 [DEV OTP] Recipient: {to_email} | Purpose: {purpose} | Code: {otp}")
+        else:
+            logger.info(f"🔑 [OTP DISPATCH] Recipient: {to_email} | Purpose: {purpose} | Code: [SECURELY_DISPATCHED]")
 
         success, err = cls.send_smtp_email(to_email, subject, html_content, text_content)
         if not success:
-            logger.info(f"ℹ️ [DEV OTP FALLBACK] SMTP notice: {err}. Code {otp} is staged and ready for verification.")
+            if Config.APP_ENV == 'development' and Config.DEBUG:
+                logger.info(f"ℹ️ [DEV OTP FALLBACK] SMTP notice: {err}. Code {otp} is staged and ready for verification.")
+            else:
+                logger.warning(f"ℹ️ [OTP DISPATCH] Delivery failed for {to_email}: {err}")
             return False, err
         return True, None
 
