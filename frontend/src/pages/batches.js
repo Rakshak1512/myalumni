@@ -716,7 +716,7 @@ export async function initBatchesPage() {
             ` : `
               <div style="display: flex; flex-direction: column; gap: 14px;">
                 ${previewPosts.map(p => `
-                  <div class="glass-card btn-open-discussion-tab" style="padding: 16px; cursor: pointer; border: var(--glass-border); background: var(--bg-subtle);">
+                  <div class="glass-card btn-open-discussion-tab" role="button" tabindex="0" aria-label="Open discussion: ${escapeHtml(p.title)}" style="padding: 16px; cursor: pointer; border: var(--glass-border); background: var(--bg-subtle);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                       <span class="badge post-type-${p.postType || 'general'}" style="font-size: 10.5px; text-transform: uppercase;">
                         ${p.postType || 'general'}
@@ -1512,7 +1512,7 @@ export async function initBatchesPage() {
                         const isSelected = userVotedOptionId === opt.id;
 
                         return `
-                          <div class="poll-option-row ${isSelected ? 'poll-voted' : ''} ${!isClosed && canParticipate ? 'btn-vote-option' : ''}" data-poll-id="${p.id}" data-opt-id="${opt.id}">
+                          <div class="poll-option-row ${isSelected ? 'poll-voted' : ''} ${!isClosed && canParticipate ? 'btn-vote-option' : ''}" ${!isClosed && canParticipate ? `role="button" tabindex="0" aria-label="Vote for ${escapeHtml(opt.optionText)}" aria-pressed="${isSelected}"` : ''} data-poll-id="${p.id}" data-opt-id="${opt.id}">
                             <div class="poll-progress-fill" style="width: ${pct}%;"></div>
                             <div style="position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px;">
                               <div style="display: flex; align-items: center; gap: 10px;">
@@ -1655,7 +1655,7 @@ export async function initBatchesPage() {
       <div class="memories-masonry-grid">
         ${memoriesList.map(m => `
           <div class="memory-card" data-memory-id="${m.id}">
-            <div class="memory-card-img-wrap btn-open-lightbox" data-memory-id="${m.id}">
+            <div class="memory-card-img-wrap btn-open-lightbox" role="button" tabindex="0" aria-label="Open memory: ${escapeHtml(m.caption || 'Batch Memory')}" data-memory-id="${m.id}">
               <img src="${m.thumbnailUrl || m.imageUrl}" alt="${escapeHtml(m.caption || 'Batch Memory')}" class="memory-card-image" loading="lazy" />
               
               <div class="memory-card-hover-overlay">
@@ -1882,6 +1882,18 @@ export async function initBatchesPage() {
   // WORKSPACE EVENT ATTACHMENT
   // =========================================================================
   const attachWorkspaceEvents = () => {
+    // Keyboard activation for custom interactive cards and rows.
+    document.querySelectorAll('.btn-open-discussion-tab, .memory-card-img-wrap.btn-open-lightbox, .btn-vote-option').forEach(element => {
+      if (element.dataset.keyboardActivationBound === 'true') return;
+      element.dataset.keyboardActivationBound = 'true';
+      element.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          element.click();
+        }
+      });
+    });
+
     // Back to hub
     document.getElementById('btn-back-to-hub')?.addEventListener('click', () => {
       activeBatchId = null;
