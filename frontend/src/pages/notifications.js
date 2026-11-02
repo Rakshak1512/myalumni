@@ -47,7 +47,7 @@ export async function initNotificationsPage() {
       }
 
       stream.innerHTML = notifs.map(n => `
-        <div class="notif-row" data-id="${n.id}" data-link="${escapeHtml(n.link || '')}" style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: ${n.isRead ? '#ffffff' : 'var(--teal-50)'}; cursor: pointer; transition: background var(--transition-fast);">
+        <div class="notif-row" role="button" tabindex="0" aria-label="Open notification: ${escapeHtml(n.title)}" data-id="${n.id}" data-link="${escapeHtml(n.link || '')}" style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: ${n.isRead ? '#ffffff' : 'var(--teal-50)'}; cursor: pointer; transition: background var(--transition-fast);">
           <div style="flex: 1;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
               <strong style="color: var(--navy-900); font-size: 14px;">${escapeHtml(n.title)}</strong>
@@ -76,6 +76,14 @@ export async function initNotificationsPage() {
       });
 
       document.querySelectorAll('.notif-row').forEach(row => {
+        row.addEventListener('keydown', (event) => {
+          // Do not steal Enter/Space from the nested Mark Read button.
+          if (event.target !== row) return;
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            row.click();
+          }
+        });
         row.addEventListener('click', async () => {
           const id = row.getAttribute('data-id');
           const link = row.getAttribute('data-link');
