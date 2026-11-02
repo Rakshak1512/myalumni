@@ -118,7 +118,7 @@ export async function initChatPage() {
         const isSelected = c.id === activeConvId;
 
         return `
-          <div class="conv-item" data-id="${c.id}" data-partner="${escapeHtml(partnerName)}" data-role="${partnerRole}" style="padding: 14px 16px; border-bottom: var(--glass-border); cursor: pointer; background: ${isSelected ? 'rgba(245, 158, 11, 0.12)' : 'transparent'}; border-left: ${isSelected ? '4px solid var(--neon-amber)' : '4px solid transparent'}; transition: all var(--transition-fast);">
+          <div class="conv-item" role="button" tabindex="0" aria-label="Open conversation with ${escapeHtml(partnerName)}" data-id="${c.id}" data-partner="${escapeHtml(partnerName)}" data-role="${partnerRole}" style="padding: 14px 16px; border-bottom: var(--glass-border); cursor: pointer; background: ${isSelected ? 'rgba(245, 158, 11, 0.12)' : 'transparent'}; border-left: ${isSelected ? '4px solid var(--neon-amber)' : '4px solid transparent'}; transition: all var(--transition-fast);">
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
               <div style="font-weight: 700; font-size: 14px; color: var(--text-heading);">${escapeHtml(partnerName)}</div>
               <span class="user-role-badge role-${partnerRole}" style="font-size: 9px;">${partnerRole}</span>
@@ -131,6 +131,12 @@ export async function initChatPage() {
       }).join('');
 
       document.querySelectorAll('.conv-item').forEach(item => {
+        item.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            item.click();
+          }
+        });
         item.addEventListener('click', () => {
           const cid = item.getAttribute('data-id');
           const pname = item.getAttribute('data-partner');
