@@ -11,7 +11,9 @@ test('mobile sidebar toggle opens and closes exactly once', async ({ page }) => 
   await expect(toggle).toBeVisible();
   await toggle.click();
   await expect(sidebar).toHaveClass(/open/);
-  await toggle.click();
+  const closeButton = page.getByRole('button', { name: 'Close navigation' });
+  await expect(closeButton).toBeVisible();
+  await closeButton.click();
   await expect(sidebar).not.toHaveClass(/open/);
 });
 
