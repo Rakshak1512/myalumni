@@ -72,6 +72,14 @@ export async function navigateTo(hash = '#/') {
 function attachLayoutHandlers() {
   initTopbarEvents();
 
+  const sidebar = document.getElementById('app-sidebar');
+  const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+  if (sidebar && sidebarCloseBtn) {
+    sidebarCloseBtn.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+    });
+  }
+
   const logoutBtn = document.getElementById('sidebar-logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
