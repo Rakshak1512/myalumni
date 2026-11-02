@@ -27,8 +27,9 @@ def create_app(config_class=Config) -> Flask:
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     )
 
-    # Initialize SQLite Database and auto-seed test users if empty
-    db = get_db()
+    # Initialize Database and auto-seed test users if empty
+    db_path = getattr(config_class, 'SQLITE_DB_PATH', None) if getattr(config_class, 'TESTING', False) else None
+    db = get_db(db_path)
     status = get_database_status()
     if status.get("total_documents", 0) == 0:
         logger.info("New database detected. Auto-seeding test users and initial records...")

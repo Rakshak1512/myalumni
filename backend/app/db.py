@@ -1546,6 +1546,30 @@ class PostgresDatabase:
         self._local = threading.local()
         self._init_schema()
 
+    @staticmethod
+    def _get_connect_kwargs(database_url: str, connect_timeout: int = 10) -> Dict[str, Any]:
+        """
+        Dynamically resolves IPv4 address for Supabase connection pooler host.
+        Windows network stacks without functional IPv6 gateways otherwise hang for minutes
+        while libpq attempts each resolved IPv6 address before falling back to IPv4.
+        """
+        import socket
+        from urllib.parse import urlparse
+        kwargs = {"connect_timeout": connect_timeout}
+        try:
+            parsed = urlparse(database_url)
+            host = parsed.hostname
+            port = parsed.port or 5432
+            if host:
+                addr_info = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
+                if addr_info:
+                    ipv4_addr = addr_info[0][4][0]
+                    kwargs["hostaddr"] = ipv4_addr
+                    logger.debug(f"Resolved dynamic IPv4 address {ipv4_addr} for {host}")
+        except Exception as e:
+            logger.debug(f"Dynamic IPv4 resolution fallback: {e}")
+        return kwargs
+
     def _get_conn(self):
         try:
             import psycopg
@@ -1553,20 +1577,51 @@ class PostgresDatabase:
         except ImportError:
             raise ImportError("psycopg is required for Supabase PostgreSQL. Install via: pip install 'psycopg[binary]'")
 
-        if not hasattr(self._local, 'conn') or self._local.conn is None or self._local.conn.closed:
-            self._local.conn = psycopg.connect(self.database_url, autocommit=True, row_factory=dict_row)
+        conn = getattr(self._local, 'conn', None)
+        if conn is not None and not conn.closed:
+            try:
+                # Fast liveness check: Supabase poolers may drop idle sessions
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                return conn
+            except Exception:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                self._local.conn = None
+
+        connect_kwargs = self._get_connect_kwargs(self.database_url, connect_timeout=10)
+        self._local.conn = psycopg.connect(
+            self.database_url,
+            autocommit=True,
+            row_factory=dict_row,
+            **connect_kwargs
+        )
         return self._local.conn
 
     def _init_schema(self):
+        import time
+        t0 = time.time()
         conn = self._get_conn()
         with conn.cursor() as cur:
             cur.execute("SELECT count(*) as total FROM information_schema.tables WHERE table_schema = 'public';")
             count = cur.fetchone()['total']
-            logger.info(f"Connected to Supabase PostgreSQL ({count} relations verified)")
+            duration = time.time() - t0
+            logger.info(f"Connected to Supabase PostgreSQL ({count} relations verified) in {duration:.2f}s")
 
     def _translate_sql(self, sql: str) -> str:
-        # Convert SQLite ? placeholders to PostgreSQL %s
-        return sql.replace('?', '%s')
+        # First escape literal % to %% for psycopg parameter interpolation, then replace ? with %s
+        return sql.replace('%', '%%').replace('?', '%s')
+
+    def close(self):
+        conn = getattr(self._local, 'conn', None)
+        if conn and not conn.closed:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            self._local.conn = None
 
     def _resolve_table(self, collection_name: str) -> Tuple[str, Optional[str]]:
         if '/' in collection_name:
@@ -1645,7 +1700,11 @@ class PostgresDatabase:
             else:
                 continue
 
-            if col in SERIALIZED_FIELDS and (isinstance(val, (dict, list)) or val is not None):
+            if col in JSON_COLUMNS and isinstance(val, (list, dict)):
+                val = json.dumps(val)
+            elif isinstance(val, (datetime.datetime, datetime.date)):
+                val = val.isoformat()
+            elif isinstance(val, (list, dict)):
                 val = json.dumps(val)
             row_values[col] = val
 
@@ -1779,16 +1838,33 @@ _db_instance: Any = None
 def get_db(db_path: Optional[str] = None):
     global _db_instance
     from app.config import Config
-    engine = getattr(Config, 'DB_ENGINE', 'sqlite').lower()
 
-    if engine in ('supabase', 'postgres', 'postgresql') and getattr(Config, 'DATABASE_URL', ''):
-        if _db_instance is None or not isinstance(_db_instance, PostgresDatabase):
-            _db_instance = PostgresDatabase(Config.DATABASE_URL)
+    # Explicit database path requested (e.g. testing in-memory or specific file)
+    if db_path is not None:
+        _db_instance = SQLiteDatabase(db_path)
         return _db_instance
 
-    if _db_instance is None or not isinstance(_db_instance, SQLiteDatabase) or db_path is not None:
-        _db_instance = SQLiteDatabase(db_path)
+    # Return existing cached instance
+    if _db_instance is not None:
+        return _db_instance
+
+    engine = getattr(Config, 'DB_ENGINE', 'sqlite').lower()
+    if engine in ('supabase', 'postgres', 'postgresql') and getattr(Config, 'DATABASE_URL', ''):
+        _db_instance = PostgresDatabase(Config.DATABASE_URL)
+        return _db_instance
+
+    _db_instance = SQLiteDatabase()
     return _db_instance
+
+
+def reset_db():
+    global _db_instance
+    if _db_instance and hasattr(_db_instance, 'close'):
+        try:
+            _db_instance.close()
+        except Exception:
+            pass
+    _db_instance = None
 
 
 # Backward compatibility alias

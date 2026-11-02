@@ -10,21 +10,29 @@ sys.path.insert(0, str(backend_dir))
 from app import create_app
 from app.config import Config
 from app.auth.jwt_utils import generate_auth_token
-from app.db import get_db
+from app.db import get_db, reset_db
 
 
 class TestConfig(Config):
     APP_ENV = 'testing'
     DEBUG = False
     TESTING = True
+    DB_ENGINE = 'sqlite'
     SQLITE_DB_PATH = ':memory:'
     ALLOWED_ORIGINS = ['http://localhost:5173']
     DEMO_SEEDING_ENABLED = True
 
 
+@pytest.fixture(autouse=True)
+def setup_test_db():
+    reset_db()
+    get_db(':memory:')
+    yield
+    reset_db()
+
+
 @pytest.fixture
 def app():
-    # Use in-memory SQLite database for tests
     get_db(':memory:')
     app = create_app(TestConfig)
     return app
