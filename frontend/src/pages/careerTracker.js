@@ -171,7 +171,7 @@ export async function initCareerTrackerPage() {
       <div style="border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; background: #ffffff;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <strong style="color: var(--navy-900); font-size: 14px;">${escapeHtml(p.title)}</strong>
-          <button type="button" class="del-proj-btn" data-id="${p.id}" style="background: none; border: none; cursor: pointer; color: var(--slate-400);" title="Delete">✕</button>
+          <button type="button" class="del-proj-btn" data-id="${p.id}" aria-label="Delete project ${escapeHtml(p.title)}" style="background: none; border: none; cursor: pointer; color: var(--slate-400);" title="Delete">✕</button>
         </div>
         <p style="font-size: 12px; color: var(--slate-600); margin: 6px 0;">${escapeHtml(p.description)}</p>
         <div style="display: flex; gap: 8px; font-size: 12px;">
