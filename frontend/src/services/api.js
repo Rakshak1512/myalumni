@@ -3,29 +3,34 @@
  * Connects the Vite frontend to the separately deployed Flask REST API.
  */
 
-// Read API Base URL: Vite env, or fallback to relative /api/v1 in production, localhost in development
+// Read the API base URL. Production must explicitly point to the separately deployed backend.
 function resolveApiBaseUrl() {
-  // Vite variables are embedded at build time. In the frontend Vercel project,
-  // set VITE_API_BASE_URL to the backend production URL ending in /api/v1.
-  const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\\/+$/, '');
-  const isProduction = import.meta.env.PROD || (
-    typeof window !== 'undefined' &&
-    window.location.hostname !== 'localhost' &&
-    window.location.hostname !== '127.0.0.1'
-  );
+  const rawUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+  const isProduction = Boolean(import.meta.env.PROD);
 
   if (isProduction) {
-    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+    if (
+      !rawUrl ||
+      rawUrl.includes('localhost') ||
+      rawUrl.includes('127.0.0.1') ||
+      !/^https?:\/\//i.test(rawUrl)
+    ) {
       console.error(
-        '[MyAlumni] VITE_API_BASE_URL is missing or points to localhost in production. ' +
-        'Set it in the frontend Vercel project to https://<backend-domain>/api/v1 and redeploy.'
+        '[MyAlumni] Production backend URL is not configured. Set VITE_API_BASE_URL ' +
+        'in the frontend Vercel project to the backend URL, then redeploy the frontend.'
       );
-      return '/api/v1';
+      return '';
     }
-    return envUrl;
+
+    const normalizedUrl = rawUrl.replace(/\/+$/, '');
+    return normalizedUrl.endsWith('/api/v1')
+      ? normalizedUrl
+      : `${normalizedUrl}/api/v1`;
   }
 
-  return envUrl || 'http://127.0.0.1:5000/api/v1';
+  return rawUrl
+    ? rawUrl.replace(/\/+$/, '')
+    : 'http://127.0.0.1:5000/api/v1';
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
@@ -34,6 +39,14 @@ class ApiService {
   constructor() {
     this.baseUrl = API_BASE_URL;
     this.token = null;
+  }
+
+  assertBackendConfigured() {
+    if (!this.baseUrl) {
+      throw new Error(
+        'The production backend URL is not configured. Set VITE_API_BASE_URL in the frontend Vercel project and redeploy.'
+      );
+    }
   }
 
   setToken(token) {
@@ -45,6 +58,7 @@ class ApiService {
   }
 
   async request(endpoint, options = {}) {
+    this.assertBackendConfigured();
     const url = `${this.baseUrl}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
@@ -123,6 +137,7 @@ class ApiService {
   }
 
   async upload(endpoint, formData) {
+    this.assertBackendConfigured();
     const url = `${this.baseUrl}${endpoint}`;
     const headers = {};
     const token = this.getToken();
@@ -149,6 +164,11 @@ class ApiService {
   }
 
   uploadWithProgress(endpoint, formData, onProgress) {
+    try {
+      this.assertBackendConfigured();
+    } catch (error) {
+      return Promise.reject(error);
+    }
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       const url = `${this.baseUrl}${endpoint}`;
