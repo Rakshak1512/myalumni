@@ -35,7 +35,7 @@ class Config:
         if not _orig:
             continue
         if '*' in _orig:
-            _pat = re.escape(_orig).replace(r'\\*', '.*')
+            _pat = re.escape(_orig).replace("\\*", ".*")
             ALLOWED_ORIGINS.append(re.compile(f"^{_pat}$"))
         else:
             ALLOWED_ORIGINS.append(_orig)
