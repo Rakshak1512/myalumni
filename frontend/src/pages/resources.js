@@ -173,7 +173,7 @@ export async function initResourcesPage() {
               </a>
             ` : '')}
             ${isPrivileged ? `
-              <button class="btn btn-danger btn-sm del-res-btn" data-id="${r.id}" title="Delete resource">
+              <button type="button" class="btn btn-danger btn-sm del-res-btn" data-id="${r.id}" title="Delete resource" aria-label="Delete resource ${escapeHtml(r.title)}">
                 Delete
               </button>
             ` : ''}
@@ -184,6 +184,32 @@ export async function initResourcesPage() {
       resGrid.innerHTML = `<p style="color: var(--color-danger); grid-column: 1 / -1;">Failed to load resources.</p>`;
     }
   };
+
+  // Delegate resource-card actions because cards are re-rendered after each load.
+  if (resGrid && !resGrid.dataset.actionsBound) {
+    resGrid.dataset.actionsBound = 'true';
+    resGrid.addEventListener('click', async (event) => {
+      const button = event.target.closest('.del-res-btn');
+      if (!button || !resGrid.contains(button)) return;
+
+      const resourceId = button.getAttribute('data-id');
+      if (!resourceId || button.disabled) return;
+      if (!window.confirm('Delete this academic resource? This action cannot be undone.')) return;
+
+      button.disabled = true;
+      const originalText = button.textContent;
+      button.textContent = 'Deleting...';
+      try {
+        await api.deleteResource(resourceId);
+        showToast('Resource deleted successfully.', 'success');
+        await loadResources();
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = originalText;
+        showToast(error.message || 'Failed to delete resource.', 'error');
+      }
+    });
+  }
 
   // Upload Resource Modal
   if (uploadBtn) {
