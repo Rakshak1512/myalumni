@@ -184,7 +184,7 @@ export function createUniversalFileUploader({
 
       <!-- OPTION A: Dropzone Section -->
       <div id="${instanceId}-upload-section" style="display: ${currentMode === 'upload' ? 'block' : 'none'};">
-        <div id="${instanceId}-dropzone" style="
+        <div id="${instanceId}-dropzone" role="button" tabindex="0" aria-label="Choose a file to upload" aria-describedby="${instanceId}-upload-help" style="
           border: 2px dashed rgba(56, 189, 248, 0.35);
           border-radius: 10px;
           padding: 24px 16px;
@@ -203,7 +203,7 @@ export function createUniversalFileUploader({
           <div style="font-weight: 600; font-size: 14px; color: var(--text-normal, #f1f5f9); margin-bottom: 4px;">
             Choose a file or drag & drop here
           </div>
-          <div style="font-size: 12px; color: var(--text-muted, #94a3b8); margin-bottom: 8px;">
+          <div id="${instanceId}-upload-help" style="font-size: 12px; color: var(--text-muted, #94a3b8); margin-bottom: 8px;">
             ${preset.label}
           </div>
           <div style="display: inline-block; font-size: 11px; padding: 3px 8px; background: rgba(56, 189, 248, 0.1); color: #38bdf8; border-radius: 12px; font-weight: 500;">
@@ -349,8 +349,19 @@ export function createUniversalFileUploader({
   tabUpload.addEventListener('click', () => setMode('upload'));
   tabUrl.addEventListener('click', () => setMode('url'));
 
+  // Pointer and keyboard activation both open the native file picker.
+  dropzone.addEventListener('click', (event) => {
+    if (event.target === fileInput) return;
+    fileInput.click();
+  });
+  dropzone.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      fileInput.click();
+    }
+  });
+
   // Drag and Drop Effects
-  dropzone.addEventListener('click', () => fileInput.click());
 
   ['dragenter', 'dragover'].forEach(eventName => {
     dropzone.addEventListener(eventName, (e) => {
