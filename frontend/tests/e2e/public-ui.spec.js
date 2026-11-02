@@ -91,6 +91,23 @@ test('all authored source buttons declare an explicit type', async () => {
   expect(violations, 'Every button must explicitly declare type="button", "submit", or "reset".').toEqual([]);
 });
 
+test('visible landing-page buttons have accessible names', async ({ page }) => {
+  await page.goto('/');
+  const unnamed = await page.locator('button:visible').evaluateAll(buttons => buttons
+    .filter(button => {
+      const name = [
+        button.getAttribute('aria-label'),
+        button.getAttribute('title'),
+        button.innerText,
+        button.textContent
+      ].filter(Boolean).join(' ').trim();
+      return !name;
+    })
+    .map(button => button.outerHTML.slice(0, 180))
+  );
+  expect(unnamed, 'Visible buttons must have readable text or an accessible label.').toEqual([]);
+});
+
 test('landing demo role cards are keyboard activatable', async ({ page }) => {
   await page.goto('/');
   const card = page.getByRole('button', { name: 'Launch student demo account' });
