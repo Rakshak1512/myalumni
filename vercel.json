@@ -3,7 +3,13 @@
   "services": {
     "myalumni-frontend": {
       "root": "frontend",
-      "framework": "vite"
+      "framework": "vite",
+      "rewrites": [
+        {
+          "source": "/(.*)",
+          "destination": "/index.html"
+        }
+      ]
     },
     "myalumni-backend": {
       "root": "backend",
