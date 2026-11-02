@@ -4,7 +4,7 @@ from flask_cors import CORS
 
 from app.config import Config
 from app.db import get_db, get_database_status
-from app.utils.responses import error_response
+from app.utils.responses import error_response, success_response
 
 # Configure logging
 logging.basicConfig(
