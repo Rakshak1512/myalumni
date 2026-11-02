@@ -65,3 +65,5 @@ backend/static/uploads/**/*
 Thumbs.db
 .vscode/
 .idea/
+
+.vercel

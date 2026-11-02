@@ -31,11 +31,11 @@ def setup_test_db():
     reset_db()
 
 
-@pytest.fixture
-def app():
+@pytest.fixture(name="app")
+def test_app():
     get_db(':memory:')
-    app = create_app(TestConfig)
-    return app
+    app_instance = create_app(TestConfig)
+    return app_instance
 
 
 @pytest.fixture
