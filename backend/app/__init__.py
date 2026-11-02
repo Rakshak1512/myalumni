@@ -18,6 +18,15 @@ def create_app(config_class=Config) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    @app.route("/", methods=["GET"])
+    def backend_root():
+        return success_response({
+            "service": "MyAlumni 2.0 Backend API",
+            "status": "running",
+            "api_base": "/api/v1",
+            "health_check": "/api/v1/health"
+        }, message="MyAlumni backend is running.")
+
     # Configure CORS
     CORS(
         app,
