@@ -164,49 +164,59 @@ def verify_registration():
     Step 2 of User Registration:
     Verifies the 6-digit OTP. On success, writes the user to the database and issues JWT.
     """
-    data = request.get_json() or {}
-    email = (data.get('email') or '').strip().lower()
-    otp = (data.get('otp') or '').strip()
+    try:
+        data = request.get_json() or {}
+        email = (data.get('email') or '').strip().lower()
+        otp = (data.get('otp') or '').strip()
 
-    if not email or not otp:
-        return error_response("Both email and 6-digit verification code are required.", "INVALID_INPUT", 400)
+        if not email or not otp:
+            return error_response("Both email and 6-digit verification code are required.", "INVALID_INPUT", 400)
 
-    is_valid, err, user_payload = OTPService.verify_registration_otp(email, otp)
-    if not is_valid:
-        return error_response(err or "Verification failed.", "INVALID_OTP", 400)
+        is_valid, err, user_payload = OTPService.verify_registration_otp(email, otp)
+        if not is_valid:
+            return error_response(err or "Verification failed.", "INVALID_OTP", 400)
 
-    # Double-check that user was not created in the interim
-    existing = user_repo.get_by_email(email)
-    if existing:
-        return error_response("An account with this email already exists.", "EMAIL_ALREADY_EXISTS", 409)
+        if not user_payload:
+            return error_response("Pending registration session expired or invalid. Please submit registration again.", "SESSION_EXPIRED", 400)
 
-    # COMMIT TO DATABASE ONLY NOW
-    uid = user_payload['uid']
-    role_profile = user_payload.pop('profile', {})
-    final_role = user_payload['role']
+        # Double-check that user was not created in the interim
+        existing = user_repo.get_by_email(email)
+        if existing:
+            return error_response("An account with this email already exists.", "EMAIL_ALREADY_EXISTS", 409)
 
-    user = user_repo.create(user_payload, doc_id=uid)
-    if role_profile:
-        user_repo.update_role_profile(uid, final_role, role_profile)
+        # COMMIT TO DATABASE ONLY NOW
+        uid = user_payload.get('uid') or str(uuid.uuid4()).replace('-', '')[:20]
+        role_profile = user_payload.pop('profile', {}) if isinstance(user_payload.get('profile'), dict) else {}
+        final_role = user_payload.get('role', 'student')
 
-    token = generate_auth_token(uid, email, final_role)
-    full_user = user_repo.get_user_with_profile(uid)
+        user = user_repo.create(user_payload, doc_id=uid)
+        if role_profile:
+            try:
+                user_repo.update_role_profile(uid, final_role, role_profile)
+            except Exception as pe:
+                logger.warning(f"Failed to create role profile for {uid}: {pe}")
 
-    log_audit_event(
-        action="USER_REGISTRATION_VERIFIED",
-        actor_id=uid,
-        actor_email=email,
-        actor_role=final_role,
-        target_type="user",
-        target_id=uid,
-        details={"role": final_role, "method": "email_otp"}
-    )
+        token = generate_auth_token(uid, email, final_role)
+        full_user = user_repo.get_user_with_profile(uid) or user
 
-    return success_response({
-        "user": full_user,
-        "token": token,
-        "role": final_role
-    }, message="Email verified and account activated successfully!", status_code=201)
+        log_audit_event(
+            action="USER_REGISTRATION_VERIFIED",
+            actor_id=uid,
+            actor_email=email,
+            actor_role=final_role,
+            target_type="user",
+            target_id=uid,
+            details={"role": final_role, "method": "email_otp"}
+        )
+
+        return success_response({
+            "user": full_user,
+            "token": token,
+            "role": final_role
+        }, message="Email verified and account activated successfully!", status_code=201)
+    except Exception as exc:
+        logger.error(f"Error during verify_registration for {request.data}: {exc}", exc_info=True)
+        return error_response("An unexpected error occurred during account verification. Please try again.", "INTERNAL_SERVER_ERROR", 500)
 
 
 @auth_bp.route('/auth/resend-registration-otp', methods=['POST'])

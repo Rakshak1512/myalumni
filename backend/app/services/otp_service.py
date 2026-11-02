@@ -31,20 +31,23 @@ def _hash_otp(email: str, otp: str) -> str:
     return hashlib.sha256(payload.encode('utf-8')).hexdigest()
 
 
-def _db_save_otp(email: str, purpose: str, otp_hash: str, expires_at: datetime.datetime, attempts: int = 0):
+def _db_save_otp(email: str, purpose: str, otp_hash: str, expires_at: datetime.datetime, attempts: int = 0, payload: Optional[Dict[str, Any]] = None):
     try:
         from app.db import get_db
         db = get_db()
         doc_id = f"{purpose}_{email}"
-        db.collection("otp_verifications").document(doc_id).set({
+        data = {
             "id": doc_id,
             "email": email,
             "purpose": purpose,
             "otp_hash": otp_hash,
             "attempts": attempts,
-            "expires_at": expires_at.isoformat(),
+            "expires_at": expires_at.isoformat() if hasattr(expires_at, 'isoformat') else str(expires_at),
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
-        })
+        }
+        if payload is not None:
+            data["payload"] = payload
+        db.collection("otp_verifications").document(doc_id).set(data)
     except Exception as e:
         logger.debug(f"DB save OTP note: {e}")
 
@@ -63,11 +66,25 @@ def _db_get_otp(email: str, purpose: str) -> Optional[Dict[str, Any]]:
                     exp_at = datetime.datetime.fromisoformat(exp_at)
                 except Exception:
                     pass
+            if isinstance(exp_at, datetime.datetime) and exp_at.tzinfo is None:
+                exp_at = exp_at.replace(tzinfo=datetime.timezone.utc)
+
+            raw_payload = d.get('payload')
+            parsed_payload = None
+            if isinstance(raw_payload, dict):
+                parsed_payload = raw_payload
+            elif isinstance(raw_payload, str) and raw_payload:
+                try:
+                    parsed_payload = json.loads(raw_payload)
+                except Exception:
+                    parsed_payload = None
+
             return {
                 "otp_hash": d.get('otp_hash'),
                 "attempts": int(d.get('attempts', 0)),
                 "expires_at": exp_at,
-                "created_at": d.get('created_at')
+                "created_at": d.get('created_at'),
+                "payload": parsed_payload
             }
     except Exception as e:
         logger.debug(f"DB get OTP note: {e}")
@@ -139,8 +156,21 @@ class OTPService:
 
     @staticmethod
     def _is_expired(record: Dict[str, Any]) -> bool:
+        if not record or not record.get('expires_at'):
+            return True
         now = datetime.datetime.now(datetime.timezone.utc)
-        return now > record['expires_at']
+        exp = record['expires_at']
+        if isinstance(exp, str):
+            try:
+                exp = datetime.datetime.fromisoformat(exp)
+            except Exception:
+                return True
+        if isinstance(exp, datetime.datetime) and exp.tzinfo is None:
+            exp = exp.replace(tzinfo=datetime.timezone.utc)
+        try:
+            return now > exp
+        except Exception:
+            return True
 
     @staticmethod
     def can_resend(record: Optional[Dict[str, Any]], cooldown_seconds: int = 60) -> Tuple[bool, int]:
@@ -148,21 +178,31 @@ class OTPService:
         if not record:
             return True, 0
         now = datetime.datetime.now(datetime.timezone.utc)
-        last_sent = record.get('last_sent_at')
+        last_sent = record.get('last_sent_at') or record.get('created_at')
         if not last_sent:
             return True, 0
-        elapsed = (now - last_sent).total_seconds()
-        if elapsed < cooldown_seconds:
-            return False, int(cooldown_seconds - elapsed)
+        if isinstance(last_sent, str):
+            try:
+                last_sent = datetime.datetime.fromisoformat(last_sent)
+            except Exception:
+                return True, 0
+        if isinstance(last_sent, datetime.datetime) and last_sent.tzinfo is None:
+            last_sent = last_sent.replace(tzinfo=datetime.timezone.utc)
+        try:
+            elapsed = (now - last_sent).total_seconds()
+            if elapsed < cooldown_seconds:
+                return False, int(cooldown_seconds - elapsed)
+        except Exception:
+            return True, 0
         return True, 0
 
     # -------------------------------------------------------------
-    # 1. REGISTRATION OTP STAGING (ZERO DB INSERTION BEFORE OTP)
+    # 1. REGISTRATION OTP STAGING (PERSISTENT & ZERO DB INSERTION BEFORE OTP)
     # -------------------------------------------------------------
     @classmethod
     def stage_registration(cls, user_payload: Dict[str, Any]) -> Tuple[bool, str, bool]:
         """
-        Stages user registration in memory without adding to the database.
+        Stages user registration in database and memory without adding to 'users' table.
         Generates and dispatches a 6-digit OTP via email only.
         Returns (success, message, email_sent).
         """
@@ -171,7 +211,7 @@ class OTPService:
             return False, "A valid email address is required.", False
 
         with _lock:
-            existing = _REGISTRATION_STORE.get(email)
+            existing = _REGISTRATION_STORE.get(email) or _db_get_otp(email, "registration")
             can_send, remaining = cls.can_resend(existing)
             if not can_send:
                 return False, f"Please wait {remaining} seconds before requesting another verification code.", False
@@ -189,6 +229,7 @@ class OTPService:
                 "expires_at": expires_at,
                 "attempts": 0
             }
+            _db_save_otp(email, "registration", otp_hash, expires_at, attempts=0, payload=user_payload)
 
         # Send OTP strictly to user's real email
         name = user_payload.get('displayName') or user_payload.get('display_name')
@@ -205,7 +246,7 @@ class OTPService:
     def resend_registration_otp(cls, email: str) -> Tuple[bool, str, bool]:
         email = _normalize_email(email)
         with _lock:
-            record = _REGISTRATION_STORE.get(email)
+            record = _REGISTRATION_STORE.get(email) or _db_get_otp(email, "registration")
             if not record:
                 return False, "No pending registration found for this email. Please register again.", False
             can_send, remaining = cls.can_resend(record)
@@ -214,12 +255,17 @@ class OTPService:
 
             otp = cls.generate_otp()
             now = datetime.datetime.now(datetime.timezone.utc)
-            record["otp_hash"] = _hash_otp(email, otp)
+            new_exp = now + datetime.timedelta(minutes=Config.OTP_EXPIRY_MINUTES)
+            otp_hash = _hash_otp(email, otp)
+            record["otp_hash"] = otp_hash
             record["last_sent_at"] = now
-            record["expires_at"] = now + datetime.timedelta(minutes=Config.OTP_EXPIRY_MINUTES)
+            record["expires_at"] = new_exp
             record["attempts"] = 0
+            _REGISTRATION_STORE[email] = record
+            _db_save_otp(email, "registration", otp_hash, new_exp, attempts=0, payload=record.get("payload"))
 
-            name = record["payload"].get("displayName") or record["payload"].get("display_name")
+            payload = record.get("payload") or {}
+            name = payload.get("displayName") or payload.get("display_name")
 
         email_sent, err = EmailService.send_otp_email(email, otp, purpose="registration", user_name=name)
 
@@ -240,31 +286,37 @@ class OTPService:
         clean_otp = (entered_otp or "").strip()
 
         with _lock:
-            record = _REGISTRATION_STORE.get(email)
+            record = _REGISTRATION_STORE.get(email) or _db_get_otp(email, "registration")
             if not record:
                 return False, "No pending registration found. The session may have expired. Please register again.", None
 
             if cls._is_expired(record):
-                del _REGISTRATION_STORE[email]
+                _REGISTRATION_STORE.pop(email, None)
+                _db_delete_otp(email, "registration")
                 return False, "Verification code has expired. Please register again.", None
 
-            if record["attempts"] >= Config.OTP_MAX_ATTEMPTS:
-                del _REGISTRATION_STORE[email]
+            if record.get("attempts", 0) >= Config.OTP_MAX_ATTEMPTS:
+                _REGISTRATION_STORE.pop(email, None)
+                _db_delete_otp(email, "registration")
                 return False, "Maximum verification attempts exceeded for security. Please register again.", None
 
             # Verify hash
             hashed_input = _hash_otp(email, clean_otp)
             if hashed_input != record["otp_hash"]:
-                record["attempts"] += 1
+                record["attempts"] = record.get("attempts", 0) + 1
                 rem = Config.OTP_MAX_ATTEMPTS - record["attempts"]
+                _REGISTRATION_STORE[email] = record
+                _db_save_otp(email, "registration", record["otp_hash"], record["expires_at"], attempts=record["attempts"], payload=record.get("payload"))
                 if rem <= 0:
-                    del _REGISTRATION_STORE[email]
+                    _REGISTRATION_STORE.pop(email, None)
+                    _db_delete_otp(email, "registration")
                     return False, "Maximum attempts exceeded. Staged registration cancelled.", None
                 return False, f"Invalid verification code. {rem} attempt{'s' if rem != 1 else ''} remaining.", None
 
-            # Success! Pop payload and invalidate staging
-            user_payload = record["payload"]
-            del _REGISTRATION_STORE[email]
+            # Success! Pop payload and invalidate staging from RAM and DB
+            user_payload = record.get("payload")
+            _REGISTRATION_STORE.pop(email, None)
+            _db_delete_otp(email, "registration")
             return True, None, user_payload
 
     # -------------------------------------------------------------
@@ -377,20 +429,23 @@ class OTPService:
         """Generates and dispatches a 6-digit OTP for verified test accounts."""
         email = _normalize_email(email)
         with _lock:
-            existing = _TEST_USER_OTP_STORE.get(email)
+            existing = _TEST_USER_OTP_STORE.get(email) or _db_get_otp(email, "test_user_login")
             can_send, remaining = cls.can_resend(existing)
             if not can_send:
                 return False, f"Please wait {remaining} seconds before requesting another code.", False
 
             otp = cls.generate_otp()
             now = datetime.datetime.now(datetime.timezone.utc)
+            exp_at = now + datetime.timedelta(minutes=Config.OTP_EXPIRY_MINUTES)
+            otp_hash = _hash_otp(email, otp)
             _TEST_USER_OTP_STORE[email] = {
-                "otp_hash": _hash_otp(email, otp),
+                "otp_hash": otp_hash,
                 "created_at": now,
                 "last_sent_at": now,
-                "expires_at": now + datetime.timedelta(minutes=Config.OTP_EXPIRY_MINUTES),
+                "expires_at": exp_at,
                 "attempts": 0
             }
+            _db_save_otp(email, "test_user_login", otp_hash, exp_at, attempts=0)
 
         email_sent, err = EmailService.send_otp_email(email, otp, purpose="test_user_login", user_name=display_name)
 
@@ -408,27 +463,33 @@ class OTPService:
         clean_otp = (entered_otp or "").strip()
 
         with _lock:
-            record = _TEST_USER_OTP_STORE.get(email)
+            record = _TEST_USER_OTP_STORE.get(email) or _db_get_otp(email, "test_user_login")
             if not record:
                 return False, "No active test login request found. Please request a code first."
 
             if cls._is_expired(record):
-                del _TEST_USER_OTP_STORE[email]
+                _TEST_USER_OTP_STORE.pop(email, None)
+                _db_delete_otp(email, "test_user_login")
                 return False, "Login code has expired. Please request a new code."
 
-            if record["attempts"] >= Config.OTP_MAX_ATTEMPTS:
-                del _TEST_USER_OTP_STORE[email]
+            if record.get("attempts", 0) >= Config.OTP_MAX_ATTEMPTS:
+                _TEST_USER_OTP_STORE.pop(email, None)
+                _db_delete_otp(email, "test_user_login")
                 return False, "Maximum verification attempts exceeded."
 
             if _hash_otp(email, clean_otp) != record["otp_hash"]:
-                record["attempts"] += 1
+                record["attempts"] = record.get("attempts", 0) + 1
                 rem = Config.OTP_MAX_ATTEMPTS - record["attempts"]
+                _TEST_USER_OTP_STORE[email] = record
+                _db_save_otp(email, "test_user_login", record["otp_hash"], record["expires_at"], attempts=record["attempts"])
                 if rem <= 0:
-                    del _TEST_USER_OTP_STORE[email]
+                    _TEST_USER_OTP_STORE.pop(email, None)
+                    _db_delete_otp(email, "test_user_login")
                     return False, "Maximum attempts exceeded."
                 return False, f"Invalid code. {rem} attempt{'s' if rem != 1 else ''} remaining."
 
             # Consumed successfully
-            del _TEST_USER_OTP_STORE[email]
+            _TEST_USER_OTP_STORE.pop(email, None)
+            _db_delete_otp(email, "test_user_login")
             return True, None
 

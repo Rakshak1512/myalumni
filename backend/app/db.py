@@ -107,7 +107,7 @@ PROFILE_TABLES = {'student_profiles', 'faculty_profiles', 'alumni_profiles'}
 JSON_COLUMNS = {
     'skills', 'career_interests', 'research_areas', 'birthday',
     'skills_required', 'participants', 'participant_names', 'participant_roles',
-    'read_by', 'details', 'target_courses', 'target_batches'
+    'read_by', 'details', 'target_courses', 'target_batches', 'payload'
 }
 
 
@@ -947,7 +947,8 @@ CREATE TABLE IF NOT EXISTS otp_verifications (
     otp_hash TEXT NOT NULL,
     attempts INTEGER DEFAULT 0,
     expires_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    payload TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_otp_email_purpose ON otp_verifications(email, purpose);
 
@@ -1169,6 +1170,11 @@ class SQLiteDatabase:
                         conn.execute("ALTER TABLE achievements ADD COLUMN reviewed_by TEXT")
                     if 'reviewed_at' not in existing_ach_cols:
                         conn.execute("ALTER TABLE achievements ADD COLUMN reviewed_at TIMESTAMP")
+
+                cur.execute("PRAGMA table_info(otp_verifications)")
+                existing_otp_cols = [r['name'] for r in cur.fetchall()]
+                if existing_otp_cols and 'payload' not in existing_otp_cols:
+                    conn.execute("ALTER TABLE otp_verifications ADD COLUMN payload TEXT")
             except Exception as e:
                 logger.warning(f"Schema migration column check note: {e}")
         logger.info(f"Relational SQLite schema verified at {self.db_path}")
@@ -1635,8 +1641,10 @@ class PostgresDatabase:
                     otp_hash VARCHAR(255) NOT NULL,
                     attempts INTEGER DEFAULT 0,
                     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    payload JSONB
                 );
+                ALTER TABLE otp_verifications ADD COLUMN IF NOT EXISTS payload JSONB;
                 CREATE INDEX IF NOT EXISTS idx_otp_email_purpose ON otp_verifications(email, purpose);
                 CREATE TABLE IF NOT EXISTS password_reset_tokens (
                     id VARCHAR(255) PRIMARY KEY,
