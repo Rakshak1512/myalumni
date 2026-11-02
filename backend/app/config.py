@@ -21,8 +21,13 @@ class Config:
     FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
     BACKEND_URL = os.getenv('BACKEND_URL', 'http://127.0.0.1:5000')
 
-    # Allowed CORS Origins
-    _raw_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://*.trycloudflare.com')
+    # Allowed CORS Origins. In production, set FRONTEND_URL and/or
+    # ALLOWED_ORIGINS to the exact deployed frontend origin(s). Do not use a
+    # wildcard for all Vercel projects.
+    _raw_origins = os.getenv(
+        'ALLOWED_ORIGINS',
+        'http://localhost:5173,http://127.0.0.1:5173'
+    )
     ALLOWED_ORIGINS = []
     import re
     for _orig in _raw_origins.split(','):
@@ -30,13 +35,10 @@ class Config:
         if not _orig:
             continue
         if '*' in _orig:
-            _pat = re.escape(_orig).replace(r'\*', '.*')
+            _pat = re.escape(_orig).replace(r'\\*', '.*')
             ALLOWED_ORIGINS.append(re.compile(f"^{_pat}$"))
         else:
             ALLOWED_ORIGINS.append(_orig)
-    # Always allow Cloudflare tunnel and Vercel domains by default
-    ALLOWED_ORIGINS.append(re.compile(r"^https://.*\.trycloudflare\.com$"))
-    ALLOWED_ORIGINS.append(re.compile(r"^https://.*\.vercel\.app$"))
     if FRONTEND_URL and FRONTEND_URL not in ALLOWED_ORIGINS:
         ALLOWED_ORIGINS.append(FRONTEND_URL)
 
