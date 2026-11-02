@@ -3322,13 +3322,13 @@ export async function initBatchesPage() {
     const contentHtml = `
       <div style="display: flex; flex-direction: column; gap: 16px;">
         <!-- Dropzone -->
-        <div id="memory-dropzone" style="border: 2px dashed rgba(99, 102, 241, 0.4); border-radius: var(--radius-lg); padding: 28px 16px; text-align: center; background: rgba(99, 102, 241, 0.04); cursor: pointer; transition: all 0.2s;">
+        <div id="memory-dropzone" role="button" tabindex="0" aria-label="Choose photos to upload" aria-describedby="memory-dropzone-help" style="border: 2px dashed rgba(99, 102, 241, 0.4); border-radius: var(--radius-lg); padding: 28px 16px; text-align: center; background: rgba(99, 102, 241, 0.04); cursor: pointer; transition: all 0.2s;">
           <input type="file" id="memory-file-input" multiple accept="image/jpeg,image/png,image/webp" style="display: none;" />
           <div style="font-size: 38px; margin-bottom: 8px;">📷</div>
           <div style="font-size: 14.5px; font-weight: 600; color: var(--text-heading); margin-bottom: 4px;">
             Choose photos or drag & drop here
           </div>
-          <p style="font-size: 12.5px; color: var(--text-muted); margin: 0;">
+          <p id="memory-dropzone-help" style="font-size: 12.5px; color: var(--text-muted); margin: 0;">
             JPG, PNG, WebP up to 10MB each. High resolution supported.
           </p>
         </div>
@@ -3402,7 +3402,15 @@ export async function initBatchesPage() {
       });
     };
 
-    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('click', (event) => {
+      if (event.target !== fileInput) fileInput.click();
+    });
+    dropzone.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        fileInput.click();
+      }
+    });
     dropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
       dropzone.style.borderColor = '#6366f1';
