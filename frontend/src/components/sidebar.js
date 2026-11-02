@@ -40,6 +40,7 @@ export function renderSidebar(currentPath = '#/dashboard') {
           <span>MyAlumni</span>
           <span class="brand-badge">2.0</span>
         </a>
+        <button type="button" id="sidebar-close-btn" class="sidebar-close-btn" aria-label="Close navigation" title="Close navigation">✕</button>
       </div>
 
       <div class="sidebar-nav">
