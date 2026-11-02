@@ -61,7 +61,7 @@ export function renderSidebar(currentPath = '#/dashboard') {
           <div class="user-name-mini" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</div>
           <span class="user-role-badge role-${role}">${role}</span>
         </div>
-        <button type="button" class="btn btn-outline btn-sm" id="sidebar-logout-btn" title="Sign out" style="padding: 4px 8px; color: #cbd5e1; border-color: rgba(255,255,255,0.15);">
+        <button type="button" class="btn btn-outline btn-sm" id="sidebar-logout-btn" title="Sign out" aria-label="Sign out" style="padding: 4px 8px; color: #cbd5e1; border-color: rgba(255,255,255,0.15);">
           ⏻
         </button>
       </div>
